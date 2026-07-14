@@ -1,15 +1,15 @@
 # Open Church OS
 
-A ready-to-flash operating system image for Raspberry Pi that turns a $60
+A ready-to-flash operating system image for Raspberry Pi that turns a $75
 computer into a church management server. Built on Raspberry Pi OS Lite.
 
-Flash it, plug the Pi into the church network, browse to
-**http://openchurch.local** — and pick, once, which app this Pi runs:
+Flash it with Raspberry Pi Imager, detailed instructions below. Plug the Pi into the church network, browse to
+**http://openchurch.local** — and pick, just once, which app this Pi runs:
 
 - **One Church** — the full system: congregation records, giving, attendance,
   groups, and a complete youth ministry module. Church and Youth dashboards.
-- **Congregation Manager** — congregation records only.
-- **Church Youth Manager** — youth ministry only.
+- **Congregation Manager** — congregation records only, no specific youth management.
+- **Church Youth Manager** — youth ministry only. Tracks all youth related data.
 
 The chosen app starts immediately behind an HTTPS front end and opens its own
 setup wizard. All three are free, open source, run entirely on the Pi, and
@@ -21,8 +21,8 @@ affiliated with or endorsed by Raspberry Pi Ltd.
 ## For churches: flashing the image
 
 1. Download the latest `.img.xz` from the Releases page.
-2. Open Raspberry Pi Imager, choose "Use custom" and pick the file.
-3. Flash to a microSD card (8 GB+), put it in the Pi, power on.
+2. Open Raspberry Pi Imager, choose **"Use custom"** and pick the file.
+3. Flash to a microSD card (32 GB+), put it in the Pi, power on.
 4. Wait about two minutes, then browse to `http://openchurch.local` from any
    device on the same network. (If that name doesn't resolve, find the Pi's
    IP on your router and use that.)
