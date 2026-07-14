@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Your account</h1>
+<p class="sub">Signed in as {{ me }} ({{ my_role }}).</p>
+<form method="post" class="card" style="max-width:420px">{{ csrf() }}
+  <label for="current">Current password</label>
+  <input type="password" id="current" name="current" required>
+  <label for="new">New password (8+ characters)</label>
+  <input type="password" id="new" name="new" required>
+  <label for="new2">Confirm new password</label>
+  <input type="password" id="new2" name="new2" required>
+  <button>Change password</button>
+</form>
+{% endblock %}

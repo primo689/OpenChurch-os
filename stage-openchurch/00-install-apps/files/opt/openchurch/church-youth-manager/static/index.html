@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Church Youth Manager</title>
+<style>
+  :root { --navy:#22335C; --bg:#F4F5F8; --muted:#9AA3B8; --amber-bg:#FFF4E0; --amber:#8A5A00; --green:#1F6B3A; --green-bg:#E6F1EA; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); font-family:-apple-system,system-ui,sans-serif; color:#1f2430; }
+  .wrap { max-width:520px; margin:0 auto; padding:20px 16px 110px; }
+  .eyebrow { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+  h1 { font-size:24px; font-weight:800; color:var(--navy); margin:2px 0 16px; }
+  .card { background:#fff; border:1px solid #eef0f4; border-radius:16px; padding:16px; margin-bottom:12px; box-shadow:0 1px 2px rgba(20,30,60,.04); }
+  .card.tap:active { background:#f7f8fa; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .name { font-weight:700; }
+  .sub { font-size:12px; color:#6b7280; margin-top:2px; }
+  .btn { border:0; border-radius:12px; padding:12px 16px; font-size:15px; font-weight:700; background:var(--navy); color:#fff; cursor:pointer; }
+  .btn.quiet { background:#E8EAF1; color:var(--navy); }
+  .btn.danger { background:#FBEAEA; color:#8C2B2B; }
+  .btn.small { padding:7px 12px; font-size:13px; border-radius:10px; }
+  .btn.full { width:100%; display:block; }
+  .btn.off { background:#ECECEC; color:#909090; }
+  .btn.green { background:var(--green); color:#fff; }
+  label.f { display:block; margin-bottom:12px; }
+  label.f span { display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#6b7280; margin-bottom:4px; }
+  input, select, textarea { width:100%; border:1px solid #d5d9e2; border-radius:12px; padding:11px 12px; font-size:16px; background:#fff; font-family:inherit; }
+  .badge { font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px; white-space:nowrap; }
+  .badge.warn { background:var(--amber-bg); color:var(--amber); }
+  .badge.navy { background:#E8EAF1; color:var(--navy); }
+  .badge.green { background:var(--green-bg); color:var(--green); }
+  .alertbox { background:var(--amber-bg); color:var(--amber); border-radius:12px; padding:8px 12px; font-size:14px; font-weight:600; margin-top:10px; }
+  .empty { text-align:center; color:#a5aab6; padding:48px 24px; font-size:14px; }
+  .tabs { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #e5e7ec; padding-bottom:env(safe-area-inset-bottom); }
+  .tabs .inner { max-width:520px; margin:0 auto; display:flex; }
+  .tabs button { flex:1; padding:15px 0; border:0; background:none; font-size:13px; font-weight:800; color:var(--muted); cursor:pointer; }
+  .tabs button.on { color:var(--navy); }
+  .backbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .backbar .title { font-weight:800; }
+  .link { color:var(--navy); font-weight:700; text-decoration:none; background:none; border:0; font-size:14px; cursor:pointer; padding:0; }
+  .flash { position:fixed; top:14px; left:50%; transform:translateX(-50%); background:var(--navy); color:#fff; font-size:14px; font-weight:700; padding:9px 18px; border-radius:99px; z-index:50; box-shadow:0 4px 14px rgba(20,30,60,.25); }
+  .grow { flex:1; }
+  .mt { margin-top:10px; } .mb { margin-bottom:10px; }
+  .notehead { display:flex; justify-content:space-between; align-items:flex-start; }
+  .notetext { margin-top:8px; font-size:14px; white-space:pre-wrap; }
+  .grid2 { display:flex; gap:8px; }
+  .grid2 > * { flex:1; }
+  a.tel { color:var(--navy); font-weight:700; text-decoration:none; font-size:14px; }
+  .divider { border-top:1px solid #f0f1f4; margin:10px 0; padding-top:10px; }
+  @media print {
+    .tabs, .no-print { display:none !important; }
+    body { background:#fff; }
+    .wrap { padding:0; max-width:none; }
+    .pagebreak { page-break-before: always; }
+    .rpt-table { font-size:11px; }
+  }
+  .rpt-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .rpt-table th, .rpt-table td { border:1px solid #d5d9e2; padding:4px 6px; text-align:center; }
+  .rpt-table th { background:#E8EAF1; color:var(--navy); font-weight:700; }
+  .rpt-table td.l, .rpt-table th.l { text-align:left; }
+  .rpt-table tr.total td { font-weight:700; background:#f4f5f8; }
+    .card { box-shadow:none; border:1px solid #bbb; break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="flash"></div>
+
+<script>
+// ------------------------------------------------------------------
+// State
+// ------------------------------------------------------------------
+let S = {
+  booted: false,
+  needsSetup: false,
+  authed: false,
+  me: null,                 // {id, name, username, role}
+  settings: { churchName:'', ministryName:'' },
+  users: [],
+  students: [], events: [], volunteers: [], attendance: {},
+  tab: 'students',
+  view: { name: 'tabs' },
+  search: '',
+  noteType: 'followup',
+  showArchived: false,
+  safetyChecked: true,
+  selectMode: false,
+  selected: {},
+  ministryFilter: 'all',
+};
+
+const GRADES = ['K','1','2','3','4','5','6','7','8','9','10','11','12'];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const gradeSort = g => g === 'K' ? 0 : (g === '?' ? 99 : parseInt(g,10));
+const gradeLabel = g => g === 'K' ? 'Kindergarten' : (g === '?' ? 'Grade not set' : 'Grade ' + g);
+// Local date, not UTC — otherwise every note written after ~6pm Central
+// gets stamped with tomorrow's date.
+const todayStr = () => { const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isAdmin = () => S.me && S.me.role === 'admin';
+const ministries = () => (S.settings.ministries && S.settings.ministries.length)
+  ? S.settings.ministries
+  : [{id:'m1', name: S.settings.ministryName || 'Youth Ministry', from:'K', to:'12'}];
+const multiMinistry = () => ministries().length > 1;
+// A student belongs to whichever ministry's grade range contains their grade.
+function ministryFor(s){
+  if (!s || s.grade === '?' ) return null;
+  const g = gradeSort(s.grade);
+  return ministries().find(m => g >= gradeSort(m.from) && g <= gradeSort(m.to)) || null;
+}
+const ministryById = id => ministries().find(m=>m.id===id) || null;
+function fmtDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'}); }
+function calcAge(dob){ if(!dob) return null;
+  const [y,m,d]=dob.split('-').map(Number); const t=new Date();
+  let age=t.getFullYear()-y; if(t.getMonth()+1<m||(t.getMonth()+1===m&&t.getDate()<d)) age--;
+  return age; }
+function fmtBirthday(dob){ if(!dob) return ''; const [y,m,d]=dob.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString(undefined,{month:'long',day:'numeric'}); }
+function addDays(iso,n){ const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d+n);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+const byGradeName = (a,b)=> gradeSort(a.grade)-gradeSort(b.grade) || a.name.localeCompare(b.name);
+const activeStudents = ()=> S.students.filter(s=>!s.archived);
+function pastEvents(){ const t=todayStr();
+  return S.events.filter(e=>e.date<=t).sort((a,b)=>a.date.localeCompare(b.date)); }
+function slippingStudents(){
+  const pe = pastEvents();
+  if (pe.length < 4) return [];
+  const last3 = pe.slice(-3), earlier = pe.slice(0,-3);
+  return activeStudents().filter(s=>{
+    const before = earlier.filter(e=>S.attendance[e.id]?.present?.[s.id]).length;
+    const recent = last3.filter(e=>S.attendance[e.id]?.present?.[s.id]).length;
+    return before >= 2 && recent === 0;
+  });
+}
+function lastSundayOfMay(y){ const d=new Date(y,4,31); d.setDate(31-d.getDay()); return d; }
+function promotionDue(){
+  if (!isAdmin()) return false;
+  const now = new Date(), y = now.getFullYear();
+  if (String(S.settings.lastPromotionYear||'') === String(y)) return false;
+  return now >= lastSundayOfMay(y) && now <= new Date(y,5,30,23,59);
+}
+
+function flash(msg){ const f=document.getElementById('flash');
+  f.innerHTML = '<div class="flash">'+esc(msg)+'</div>';
+  setTimeout(()=>f.innerHTML='',2200); }
+
+// ------------------------------------------------------------------
+// API
+// ------------------------------------------------------------------
+async function api(method, path, body){
+  const res = await fetch(path, {
+    method,
+    headers: {'Content-Type':'application/json'},
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (res.status === 401){ S.authed = false; render(); throw new Error('auth'); }
+  if (!res.ok) {
+    let msg = 'Something went wrong — try again';
+    try { const e = await res.json(); if (e.error) msg = e.error; } catch(_){}
+    flash(msg); throw new Error('http '+res.status);
+  }
+  return res.json();
+}
+
+async function boot(){
+  try {
+    const st = await fetch('/api/setup-status').then(r=>r.json());
+    S.needsSetup = st.needsSetup;
+    S.version = st.version || '';
+    S.settings.churchName = st.churchName;
+    S.settings.ministryName = st.ministryName;
+  } catch(e){}
+  S.booted = true;
+  if (!S.needsSetup) await loadAll(); else render();
+}
+
+async function loadAll(){
+  try {
+    const d = await api('GET','/api/all');
+    Object.assign(S, { authed:true, students:d.students, events:d.events,
+                       volunteers:d.volunteers, attendance:d.attendance,
+                       settings:d.settings, me:d.me, version:d.version||S.version });
+    if (S.ministryFilter === undefined) S.ministryFilter = 'all';
+    if (isAdmin()) S.users = await api('GET','/api/users');
+  } catch(e){ /* stays on login */ }
+  render();
+}
+
+async function doSetup(){
+  const churchName = document.getElementById('s-church').value.trim();
+  const ministriesArr = [];
+  document.querySelectorAll('.m-row').forEach(row=>{
+    const name = row.querySelector('.m-name').value.trim();
+    if (name) ministriesArr.push({
+      name,
+      from: row.querySelector('.m-from').value,
+      to: row.querySelector('.m-to').value,
+    });
+  });
+  const adminName = document.getElementById('s-name').value.trim();
+  const username = document.getElementById('s-user').value.trim();
+  const password = document.getElementById('s-pw').value;
+  const confirm2 = document.getElementById('s-pw2').value;
+  if (!churchName) return flash('Church name is required');
+  if (!ministriesArr.length) return flash('Add at least one ministry');
+  for (const m of ministriesArr){
+    if (gradeSort(m.from) > gradeSort(m.to)) return flash(m.name+': grade range is backwards');
+  }
+  if (!adminName || !username) return flash('Your name and a username are required');
+  if (password.length < 8) return flash('Password needs at least 8 characters');
+  if (password !== confirm2) return flash("Passwords don't match");
+  await api('POST','/api/setup',{churchName, ministries: ministriesArr, adminName, username, password});
+  await api('POST','/api/login',{username, password});
+  S.needsSetup = false;
+  await loadAll();
+  flash('Welcome! You\u2019re all set up.');
+}
+
+async function doLogin(){
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pw').value;
+  try {
+    await api('POST','/api/login',{username, password});
+    await loadAll();
+  } catch(e){ /* flash already shown */ }
+}
+
+// ------------------------------------------------------------------
+// Data mutations
+// ------------------------------------------------------------------
+async function saveStudent(id){
+  const existing = S.students.find(s=>s.id===id);
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return flash('Name is required');
+  const guardians = [];
+  document.querySelectorAll('.g-row').forEach(row=>{
+    const gname = row.querySelector('.g-name').value.trim();
+    if (gname) guardians.push({
+      name: gname,
+      relation: row.querySelector('.g-rel').value.trim(),
+      phone: row.querySelector('.g-phone').value.trim(),
+    });
+  });
+  const st = {
+    id, name,
+    grade: document.getElementById('f-grade').value,
+    birthdate: document.getElementById('f-dob').value,
+    baptizedDate: document.getElementById('f-baptized').value,
+    visitor: document.getElementById('f-visitor').checked,
+    photoConsent: document.getElementById('f-photo').value,
+    allergies: document.getElementById('f-allergies').value.trim(),
+    medical: document.getElementById('f-medical').value.trim(),
+    guardians,
+    emergencyName: document.getElementById('f-ename').value.trim(),
+    emergencyPhone: document.getElementById('f-ephone').value.trim(),
+    notes: existing ? (existing.notes||[]) : [],
+    archived: existing ? !!existing.archived : false,
+    graduated: existing ? !!existing.graduated : false,
+  };
+  await api('PUT','/api/students/'+id, st);
+  if (existing) S.students = S.students.map(s=>s.id===id?st:s);
+  else S.students.push(st);
+  S.view = existing ? {name:'student', id} : {name:'tabs'};
+  flash('Saved'); render();
+}
+
+async function deleteStudent(id){
+  const s = S.students.find(x=>x.id===id);
+  if (!confirm('Delete '+s.name+"? This can't be undone.")) return;
+  await api('DELETE','/api/students/'+id);
+  S.students = S.students.filter(x=>x.id!==id);
+  S.view = {name:'tabs'}; render();
+}
+
+async function addNote(sid){
+  const text = document.getElementById('note-text').value.trim();
+  if (!text) return;
+  const s = S.students.find(x=>x.id===sid);
+  const by = S.me ? S.me.name : '';
+  s.notes = [{id:uid(), date:todayStr(), type:S.noteType, text, by}, ...(s.notes||[])];
+  await api('PUT','/api/students/'+sid, s);
+  render();
+}
+
+async function deleteNote(sid, nid){
+  const s = S.students.find(x=>x.id===sid);
+  const n = (s.notes||[]).find(x=>x.id===nid);
+  if (!confirm('Delete this '+(n && n.type==='baptism' ? 'baptism conversation' : 'follow-up')+' note? This can\u2019t be undone.')) return;
+  s.notes = (s.notes||[]).filter(x=>x.id!==nid);
+  await api('PUT','/api/students/'+sid, s);
+  render();
+}
+
+async function saveEvent(id){
+  const existing = S.events.find(e=>e.id===id);
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return flash('Event name is required');
+  const date = document.getElementById('f-date').value || todayStr();
+  const needsPermission = document.getElementById('f-perm').checked;
+  const mSel = document.getElementById('f-ministry');
+  const ev = { id, name, date, needsPermission, ministryId: mSel ? mSel.value : 'all' };
+  await api('PUT','/api/events/'+id, ev);
+  if (existing) S.events = S.events.map(e=>e.id===id?ev:e);
+  else S.events.push(ev);
+  // Weekly repeats (new events only)
+  const repeatEl = document.getElementById('f-repeat');
+  const until = repeatEl ? repeatEl.value : '';
+  if (!existing && until && until > date){
+    let d = addDays(date, 7), made = 0;
+    while (d <= until && made < 60){
+      const copy = { id: uid(), name, date: d, needsPermission };
+      await api('PUT','/api/events/'+copy.id, copy);
+      S.events.push(copy);
+      d = addDays(d, 7); made++;
+    }
+    flash('Created '+(made+1)+' weekly events');
+    S.view = {name:'tabs'}; S.tab = 'events'; render();
+    return;
+  }
+  S.view = {name:'event', id}; render();
+}
+
+async function deleteEvent(id){
+  const e = S.events.find(x=>x.id===id);
+  if (!confirm('Delete "'+e.name+'" and its attendance?')) return;
+  await api('DELETE','/api/events/'+id);
+  S.events = S.events.filter(x=>x.id!==id);
+  delete S.attendance[id];
+  S.view = {name:'tabs'}; render();
+}
+
+async function toggleAtt(eid, field, sid){
+  // optimistic flip for instant feel…
+  const local = S.attendance[eid] || {present:{}, permission:{}};
+  local[field] = local[field] || {};
+  local[field][sid] = !local[field][sid];
+  S.attendance[eid] = local;
+  render();
+  // …then the server flips it atomically and sends back the truth,
+  // so two phones checking kids in never erase each other's marks.
+  try {
+    const rec = await api('POST','/api/attendance/'+eid+'/toggle', {field, studentId: sid});
+    S.attendance[eid] = rec;
+    render();
+  } catch(e){ /* flash already shown; next loadAll resyncs */ }
+  const rec = S.attendance[eid];
+  if (field === 'present' && rec.present?.[sid]){
+    const s = S.students.find(x=>x.id===sid);
+    if (s && s.visitor){
+      const visits = S.events.filter(e=>S.attendance[e.id]?.present?.[sid]).length;
+      if (visits === 2) flash(s.name+"'s 2nd visit — great time for a follow-up note");
+    }
+  }
+}
+
+async function addVisitor(eid){
+  const name = (prompt('Visitor\u2019s name?')||'').trim();
+  if (!name) return;
+  const st = { id: uid(), name, grade:'?', visitor:true, guardians:[], notes:[] };
+  await api('PUT','/api/students/'+st.id, st);
+  S.students.push(st);
+  const rec = await api('POST','/api/attendance/'+eid+'/toggle', {field:'present', studentId: st.id});
+  S.attendance[eid] = rec;
+  flash(name+' added and marked here');
+  render();
+}
+
+async function saveVolunteer(id){
+  const existing = S.volunteers.find(v=>v.id===id);
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return flash('Name is required');
+  const v = { id, name,
+    role: document.getElementById('f-role').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    notes: document.getElementById('f-notes').value.trim() };
+  await api('PUT','/api/volunteers/'+id, v);
+  if (existing) S.volunteers = S.volunteers.map(x=>x.id===id?v:x);
+  else S.volunteers.push(v);
+  S.view = {name:'tabs'}; render();
+}
+
+async function deleteVolunteer(id){
+  const v = S.volunteers.find(x=>x.id===id);
+  if (!confirm('Remove '+v.name+'?')) return;
+  await api('DELETE','/api/volunteers/'+id);
+  S.volunteers = S.volunteers.filter(x=>x.id!==id);
+  S.view = {name:'tabs'}; render();
+}
+
+async function restoreBackup(){
+  let data;
+  try { data = JSON.parse(document.getElementById('import-text').value); }
+  catch(e){ return flash("That doesn't look like a valid backup"); }
+  if (!confirm('Replace ALL current ministry data with this backup? (User accounts are kept.)')) return;
+  await api('POST','/api/import', data);
+  await loadAll();
+  flash('Backup restored');
+}
+
+// ------------------------------------------------------------------
+// Settings & team (admin)
+// ------------------------------------------------------------------
+async function saveSettings(){
+  const churchName = document.getElementById('set-church').value.trim();
+  if (!churchName) return flash('Church name is required');
+  const ministriesArr = [];
+  document.querySelectorAll('.m-row').forEach(row=>{
+    const name = row.querySelector('.m-name').value.trim();
+    if (name) ministriesArr.push({ name,
+      from: row.querySelector('.m-from').value,
+      to: row.querySelector('.m-to').value });
+  });
+  if (!ministriesArr.length) return flash('Keep at least one ministry');
+  for (const m of ministriesArr){
+    if (gradeSort(m.from) > gradeSort(m.to)) return flash(m.name+': grade range is backwards');
+  }
+  await api('PUT','/api/settings',{churchName, ministries: ministriesArr});
+  await loadAll();
+  flash('Saved');
+}
+
+async function saveUser(id){
+  const name = document.getElementById('u-name').value.trim();
+  const role = document.getElementById('u-role').value;
+  const password = document.getElementById('u-pw').value;
+  if (!id){
+    const username = document.getElementById('u-user').value.trim();
+    await api('POST','/api/users',{name, username, password, role});
+  } else {
+    const body = {name, role};
+    if (password) body.password = password;
+    await api('PUT','/api/users/'+id, body);
+  }
+  S.users = await api('GET','/api/users');
+  S.view = {name:'tabs'}; S.tab = 'more';
+  flash('Saved'); render();
+}
+
+async function deleteUser(id){
+  const u = S.users.find(x=>x.id===id);
+  if (!confirm('Remove '+u.name+"'s account? They won't be able to sign in anymore.")) return;
+  await api('DELETE','/api/users/'+id);
+  S.users = await api('GET','/api/users');
+  S.view = {name:'tabs'}; S.tab = 'more';
+  render();
+}
+
+async function signOut(){
+  await api('POST','/api/logout');
+  S.authed = false; S.me = null;
+  render();
+}
+
+async function copyParentNumbers(eid){
+  const rec = S.attendance[eid] || {present:{}};
+  let pool = activeStudents().filter(s=>rec.present?.[s.id]);
+  const usedCheckedIn = pool.length > 0;
+  if (!pool.length) pool = activeStudents();
+  const nums = [...new Set(pool.flatMap(s=>(s.guardians||[]).map(g=>g.phone).filter(Boolean)))];
+  if (!nums.length) return flash('No parent numbers found');
+  const text = nums.join(', ');
+  try {
+    await navigator.clipboard.writeText(text);
+    flash('Copied '+nums.length+' numbers ('+(usedCheckedIn?'checked-in kids':'everyone')+')');
+  } catch(e){
+    prompt('Copy these numbers:', text); // clipboard needs https; this fallback always works
+  }
+}
+
+async function toggleArchive(id){
+  const s = S.students.find(x=>x.id===id);
+  s.archived = !s.archived;
+  await api('PUT','/api/students/'+id, s);
+  flash(s.archived ? 'Archived — history kept' : 'Restored to active list');
+  S.view = {name:'tabs'}; render();
+}
+
+async function promoteAll(){
+  const active = activeStudents();
+  if (!active.length) return flash('No active students to promote');
+  const seniors = active.filter(s=>s.grade==='12');
+  const movingUp = active.length - seniors.length;
+  if (!confirm('Promotion Sunday: move '+movingUp+' student'+(movingUp===1?'':'s')+' up a grade'
+      + (seniors.length ? ' and graduate '+seniors.length+' senior'+(seniors.length===1?'':'s')+' (archived, history kept)' : '')
+      + '? This can\u2019t be undone in one tap.')) return;
+  for (const s of active){
+    if (s.grade === '12'){ s.graduated = true; s.archived = true; }
+    else s.grade = s.grade === 'K' ? '1' : String(parseInt(s.grade,10)+1);
+    await api('PUT','/api/students/'+s.id, s);
+  }
+  const year = String(new Date().getFullYear());
+  await api('PUT','/api/settings',{churchName:S.settings.churchName,
+    ministryName:S.settings.ministryName, lastPromotionYear:year});
+  S.settings.lastPromotionYear = year;
+  flash('Everyone promoted — happy new ministry year');
+  render();
+}
+
+// ------------------------------------------------------------------
+// Navigation helpers
+// ------------------------------------------------------------------
+function nav(view){ S.view = view; render(); }
+function setTab(t){ S.tab = t; S.view = {name:'tabs'}; render(); }
+function setSearch(v){ S.search = v; renderList(); }
+function setNoteType(t){ S.noteType = t; render(); }
+function addGuardianRow(){
+  document.getElementById('g-rows').insertAdjacentHTML('beforeend', guardianRowHTML({}));
+}
+
+// ------------------------------------------------------------------
+// Views
+// ------------------------------------------------------------------
+function header(){
+  const ch = S.settings.churchName || '';
+  if (multiMinistry())
+    return `<div class="eyebrow">${esc(ch)}</div><h1>Ministries</h1>`;
+  const min = S.settings.ministryName || 'Youth Ministry';
+  return `<div class="eyebrow">${esc(ch)}</div><h1>${esc(min)}</h1>`;
+}
+function ministryChips(){
+  if (!multiMinistry()) return '';
+  const chip = (id,label) => `<button class="btn small ${S.ministryFilter===id?'':'quiet'}"
+    style="margin:0 6px 8px 0" onclick="S.ministryFilter='${id}';render()">${esc(label)}</button>`;
+  return '<div>' + chip('all','All') + ministries().map(m=>chip(m.id,m.name)).join('') + '</div>';
+}
+
+function backbar(backView, title, rightHTML){
+  return `<div class="backbar">
+    <button class="link" onclick='nav(${JSON.stringify(backView)})'>&lsaquo; Back</button>
+    <div class="title">${esc(title)}</div>
+    <div style="min-width:60px;text-align:right">${rightHTML||''}</div>
+  </div>`;
+}
+
+function gradeOptions(sel){
+  return ['K','1','2','3','4','5','6','7','8','9','10','11','12']
+    .map(g=>`<option value="${g}" ${g===sel?'selected':''}>${g==='K'?'K':g}</option>`).join('');
+}
+function ministryRowHTML(m){
+  return `<div class="card m-row" style="padding:12px">
+    <input class="m-name mb" placeholder="Ministry name (e.g. The Underground)" value="${esc(m.name||'')}">
+    <div class="grid2">
+      <label class="f" style="margin:0"><span>From grade</span><select class="m-from">${gradeOptions(m.from||'K')}</select></label>
+      <label class="f" style="margin:0"><span>To grade</span><select class="m-to">${gradeOptions(m.to||'12')}</select></label>
+    </div>
+  </div>`;
+}
+function addMinistryRow(){
+  document.getElementById('m-rows').insertAdjacentHTML('beforeend', ministryRowHTML({from:'K', to:'12'}));
+}
+
+function setupView(){
+  return `
+  <div class="eyebrow">Welcome</div><h1>Set up your tracker</h1>
+  <div class="card">
+    <p class="sub" style="font-size:14px;margin-top:0">This takes one minute and only happens once.
+    You're creating the first admin account — you can add your volunteers later from the More tab.</p>
+    <label class="f"><span>Church name</span><input id="s-church" placeholder="e.g. First Christian Church"></label>
+    <label class="f"><span>Your ministries — one or several, each with its grade range</span></label>
+    <div id="m-rows">${ministryRowHTML({name:'', from:'K', to:'12'})}</div>
+    <button class="btn quiet small mb" onclick="addMinistryRow()">+ Add another ministry</button>
+    <p class="sub" style="font-size:12px">Example: "Road Kids" K–5 and "The Underground" 6–12. Kids land in the right ministry automatically by grade.</p>
+    <div class="divider"></div>
+    <label class="f"><span>Your name</span><input id="s-name" placeholder="e.g. Sam"></label>
+    <label class="f"><span>Username (what you'll type to sign in)</span><input id="s-user" autocapitalize="none" placeholder="e.g. sam"></label>
+    <label class="f"><span>Password (8+ characters)</span><input id="s-pw" type="password" autocomplete="new-password"></label>
+    <label class="f"><span>Password again</span><input id="s-pw2" type="password" autocomplete="new-password"
+      onkeydown="if(event.key==='Enter')doSetup()"></label>
+    <button class="btn full" onclick="doSetup()">Finish setup</button>
+  </div>`;
+}
+
+function loginView(){
+  const ch = S.settings.churchName || '';
+  const min = multiMinistry() ? '' : (S.settings.ministryName || '');
+  return `
+  <div style="text-align:center;margin:28px 0 20px">
+    <div class="eyebrow">Church Youth Manager</div>
+    <h1 style="margin:2px 0 2px">${esc(ch)}</h1>
+    ${min && min !== ch ? `<div class="sub" style="font-size:14px">${esc(min)}</div>` : ''}
+  </div>
+  <div class="card">
+    <div class="name mb">Sign in</div>
+    <label class="f"><span>Username</span>
+      <input id="login-user" autocapitalize="none" autocomplete="username"></label>
+    <label class="f"><span>Password</span>
+      <input id="login-pw" type="password" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doLogin()"></label>
+    <button class="btn full" onclick="doLogin()">Sign in</button>
+  </div>
+  <div class="empty" style="padding:10px">Church Youth Manager v${esc(S.version||'')}</div>`;
+}
+
+function studentsList(){
+  let h = ministryChips();
+  if (promotionDue()){
+    h += `<div class="card" style="background:#E8EAF1;border-color:#D8DCEA">
+      <div class="name" style="color:var(--navy)">Promotion Sunday</div>
+      <div class="sub">Time to move everyone up a grade for the new year.</div>
+      <button class="btn small mt" onclick="promoteAll()">Promote everyone</button>
+    </div>`;
+  }
+  const slip = slippingStudents();
+  if (slip.length){
+    h += `<div class="card" style="background:var(--amber-bg);border-color:#F0E2C4">
+      <div class="name" style="color:var(--amber)">Haven't seen lately</div>
+      <div class="sub" style="color:var(--amber)">Came regularly, then missed the last 3 events — worth a text.</div>
+      <div class="mt">${slip.map(s=>`<button class="btn small quiet" style="margin:0 6px 6px 0" onclick='nav({name:"student",id:"${s.id}"})'>${esc(s.name)}</button>`).join('')}</div>
+    </div>`;
+  }
+  h += `<div class="row mb">
+    <input class="grow" placeholder="Search students or parents…" value="${esc(S.search)}"
+           oninput="setSearch(this.value)">
+    <button class="btn" onclick="nav({name:'studentForm'})">+</button>
+  </div><div id="student-cards">`;
+  h += studentCards(filteredStudents());
+  h += '</div>';
+  const archCount = S.students.filter(s=>s.archived).length;
+  if (archCount) h += `<div style="text-align:center;margin-top:6px">
+    <button class="link" style="font-size:13px" onclick="S.showArchived=!S.showArchived;render()">
+    ${S.showArchived?'Hide':'Show'} archived (${archCount})</button></div>`;
+  return h;
+}
+
+function filteredStudents(){
+  const q = S.search.trim().toLowerCase();
+  const f = S.ministryFilter || 'all';
+  return S.students
+    .filter(s => S.showArchived || !s.archived)
+    .filter(s => f==='all' || (ministryFor(s) && ministryFor(s).id === f))
+    .filter(s => !q || s.name.toLowerCase().includes(q) ||
+      (s.guardians||[]).some(g=>g.name.toLowerCase().includes(q)))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+function studentCards(list){
+  if (!list.length)
+    return `<div class="empty">${S.students.length ? 'No matches.' : 'No students yet. Tap + to add your first student.'}</div>`;
+  return list.map(s=>`
+    <div class="card tap" onclick='nav({name:"student",id:"${s.id}"})'>
+      <div class="row">
+        <div>
+          <div class="name">${esc(s.name)}</div>
+          <div class="sub">${gradeLabel(s.grade)}${multiMinistry()&&ministryFor(s)?' · '+esc(ministryFor(s).name):''}${s.birthdate?' · '+calcAge(s.birthdate):''}${s.visitor?' · visitor':''}${s.baptizedDate?' · 💧 baptized':(s.notes||[]).some(n=>n.type==='baptism')?' · 🌊 baptism convos':''}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+          ${s.archived ? `<span class="badge navy">${s.graduated?'graduated':'archived'}</span>` : ''}
+          ${s.photoConsent==='no' ? '<span class="badge warn">📷 no</span>' : ''}
+          ${s.allergies ? '<span class="badge warn">⚠ allergy</span>' : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderList(){
+  const el = document.getElementById('student-cards');
+  if (el) el.innerHTML = studentCards(filteredStudents());
+}
+
+function guardianRowHTML(g){
+  return `<div class="card g-row" style="padding:12px">
+    <input class="g-name mb" placeholder="Guardian name" value="${esc(g.name||'')}">
+    <div class="grid2">
+      <input class="g-rel" placeholder="Relation (Mom…)" value="${esc(g.relation||'')}">
+      <input class="g-phone" type="tel" placeholder="Phone" value="${esc(g.phone||'')}">
+    </div>
+  </div>`;
+}
+
+function studentForm(id){
+  const s = S.students.find(x=>x.id===id) ||
+    { id: uid(), name:'', grade:'6', allergies:'', medical:'',
+      guardians:[{}], emergencyName:'', emergencyPhone:'' };
+  const existing = !!id;
+  const back = existing ? {name:'student', id:s.id} : {name:'tabs'};
+  return backbar(back, existing ? 'Edit student' : 'New student') + `
+  <label class="f"><span>Name</span><input id="f-name" value="${esc(s.name)}" placeholder="First and last name"></label>
+  <div class="grid2">
+    <label class="f"><span>Grade${multiMinistry()?' <span id="min-hint" style="text-transform:none;letter-spacing:0"></span>':''}</span><select id="f-grade" ${multiMinistry()?`onchange="const m=ministryFor({grade:this.value});document.getElementById('min-hint').textContent=m?'→ '+m.name:''"`:''}>
+      ${GRADES.map(g=>`<option value="${g}" ${g===s.grade?'selected':''}>${gradeLabel(g)}</option>`).join('')}
+      <option value="?" ${s.grade==='?'?'selected':''}>Not sure yet</option>
+    </select></label>
+    <label class="f"><span>Birthdate (optional)</span><input id="f-dob" type="date" value="${esc(s.birthdate||'')}"></label>
+  </div>
+  <div class="grid2">
+    <label class="f"><span>Baptized on (blank if not yet)</span><input id="f-baptized" type="date" value="${esc(s.baptizedDate||'')}"></label>
+    <label class="f"><span>Visitor?</span>
+      <label class="card row" style="padding:11px 12px;margin:0;cursor:pointer">
+        <span class="sub" style="margin:0">Still a visitor</span>
+        <input id="f-visitor" type="checkbox" style="width:20px;height:20px" ${s.visitor?'checked':''}>
+      </label>
+    </label>
+  </div>
+  <label class="f"><span>Allergies</span><input id="f-allergies" value="${esc(s.allergies)}" placeholder="e.g. peanuts, bee stings — blank if none"></label>
+  <label class="f"><span>Medical / other needs</span><input id="f-medical" value="${esc(s.medical||'')}" placeholder="e.g. inhaler in backpack"></label>
+  <label class="f"><span>Photo consent (for social media &amp; slideshows)</span><select id="f-photo">
+    <option value="" ${!s.photoConsent?'selected':''}>Not asked yet</option>
+    <option value="yes" ${s.photoConsent==='yes'?'selected':''}>Yes — photos OK</option>
+    <option value="no" ${s.photoConsent==='no'?'selected':''}>No — don't post photos</option>
+  </select></label>
+  <label class="f"><span>Parents / guardians</span></label>
+  <div id="g-rows">${(s.guardians&&s.guardians.length?s.guardians:[{}]).map(guardianRowHTML).join('')}</div>
+  <button class="btn quiet small mb" onclick="addGuardianRow()">+ Add another guardian</button>
+  <label class="f mt"><span>Emergency contact (if different)</span></label>
+  <div class="grid2 mb">
+    <input id="f-ename" placeholder="Name" value="${esc(s.emergencyName||'')}">
+    <input id="f-ephone" type="tel" placeholder="Phone" value="${esc(s.emergencyPhone||'')}">
+  </div>
+  <button class="btn full" onclick="saveStudent('${s.id}')">Save student</button>
+  ${existing ? `<button class="btn full quiet mt" onclick="toggleArchive('${s.id}')">${s.archived?'Unarchive — bring back to active list':'Archive — hide from lists, keep history'}</button>
+  <button class="btn full danger mt" onclick="deleteStudent('${s.id}')">Delete student</button>` : ''}`;
+}
+
+function studentDetail(id){
+  const s = S.students.find(x=>x.id===id);
+  if (!s) return '<div class="empty">Student not found.</div>';
+  const attended = S.events.filter(e => S.attendance[e.id]?.present?.[id]).length;
+  const guardians = (s.guardians||[]).map(g=>`
+    <div class="row" style="padding:6px 0">
+      <div><div class="name" style="font-size:15px">${esc(g.name)}</div><div class="sub">${esc(g.relation||'')}</div></div>
+      ${g.phone?`<a class="tel" href="tel:${esc(g.phone)}">${esc(g.phone)}</a>`:''}
+    </div>`).join('') || '<div class="sub">None listed</div>';
+  const emergency = (s.emergencyName || s.emergencyPhone) ? `
+    <div class="divider row">
+      <div><div class="name" style="font-size:15px">${esc(s.emergencyName||'Emergency contact')}</div><div class="sub">Emergency contact</div></div>
+      ${s.emergencyPhone?`<a class="tel" href="tel:${esc(s.emergencyPhone)}">${esc(s.emergencyPhone)}</a>`:''}
+    </div>` : '';
+  const notes = (s.notes||[]).map(n=>`
+    <div class="card">
+      <div class="notehead">
+        <div>
+          <span class="badge ${n.type==='baptism'?'green':'navy'}">${n.type==='baptism'?'Baptism':'Follow-up'}</span>
+          <span class="sub" style="display:inline;margin-left:8px">${fmtDate(n.date)}${n.by?' · '+esc(n.by):''}</span>
+        </div>
+        <button class="link" style="color:#a5aab6;font-size:12px" onclick="deleteNote('${s.id}','${n.id}')">Delete</button>
+      </div>
+      <div class="notetext">${esc(n.text)}</div>
+    </div>`).join('');
+  return backbar({name:'tabs'}, s.name,
+      `<button class="btn quiet small" onclick='nav({name:"studentForm",id:"${s.id}"})'>Edit</button>`) + `
+  <div class="card">
+    <div class="name" style="font-size:20px;color:var(--navy)">${esc(s.name)} ${s.archived?`<span class="badge navy">${s.graduated?'graduated':'archived'}</span>`:''} ${s.visitor?'<span class="badge navy">visitor</span>':''}</div>
+    <div class="sub">${gradeLabel(s.grade)}${s.birthdate?` · age ${calcAge(s.birthdate)} · 🎂 ${fmtBirthday(s.birthdate)}`:''} · attended ${attended} event${attended===1?'':'s'}</div>
+    ${s.baptizedDate?`<div class="alertbox" style="background:var(--green-bg);color:var(--green)">💧 Baptized ${fmtDate(s.baptizedDate)}</div>`:''}
+    ${s.photoConsent==='no'?'<div class="alertbox">📷 No photo consent — don\u2019t post pictures of this student</div>':''}
+    ${(s.allergies||s.medical)?`<div class="alertbox">${s.allergies?'⚠ Allergies: '+esc(s.allergies):''}${s.allergies&&s.medical?'<br>':''}${s.medical?'⚕ '+esc(s.medical):''}</div>`:''}
+  </div>
+  <div class="card">
+    <label class="f"><span>Guardians</span></label>
+    ${guardians}${emergency}
+  </div>
+  <div class="card">
+    <label class="f"><span>Add a note</span></label>
+    <div class="grid2 mb">
+      <button class="btn small ${S.noteType==='followup'?'':'off'}" onclick="setNoteType('followup')">Follow-up</button>
+      <button class="btn small ${S.noteType==='baptism'?'green':'off'}" onclick="setNoteType('baptism')">Baptism convo</button>
+    </div>
+    <textarea id="note-text" rows="3" placeholder="${S.noteType==='baptism'?'What did you talk about? Where are they at?':'What needs follow-up?'}"></textarea>
+    <button class="btn small mt" onclick="addNote('${s.id}')">Save note</button>
+  </div>
+  ${notes}`;
+}
+
+async function bulkAssignEvents(){
+  const sel = document.getElementById('bulk-ministry');
+  if (!sel || !sel.value) return;
+  const targets = S.events.filter(e=>!e.ministryId || e.ministryId==='all');
+  if (!targets.length) return flash('No unassigned events found');
+  const mName = (ministryById(sel.value)||{}).name || '';
+  if (!confirm('Assign '+targets.length+' event'+(targets.length===1?'':'s')+' (everything currently marked "All ministries") to '+mName+'?')) return;
+  for (const e of targets){
+    e.ministryId = sel.value;
+    await api('PUT','/api/events/'+e.id, e);
+  }
+  flash(targets.length+' events assigned to '+mName);
+  render();
+}
+
+function toggleSelectMode(){
+  S.selectMode = !S.selectMode;
+  S.selected = {};
+  render();
+}
+function toggleSelected(id, ev){
+  if (ev) ev.stopPropagation();
+  S.selected[id] = !S.selected[id];
+  render();
+}
+async function deleteSelectedEvents(){
+  const ids = Object.keys(S.selected).filter(id=>S.selected[id]);
+  if (!ids.length) return flash('Nothing selected');
+  if (!confirm('Delete '+ids.length+' event'+(ids.length===1?'':'s')+' and their attendance? This can\u2019t be undone.')) return;
+  for (const id of ids){
+    await api('DELETE','/api/events/'+id);
+    S.events = S.events.filter(e=>e.id!==id);
+    delete S.attendance[id];
+  }
+  S.selectMode = false; S.selected = {};
+  flash(ids.length+' events deleted');
+  render();
+}
+
+function eventsList(){
+  const today = todayStr();
+  const f = S.ministryFilter || 'all';
+  const inFilter = e => f==='all' || !e.ministryId || e.ministryId==='all' || e.ministryId===f;
+  // Tonight's event belongs at the top: upcoming soonest-first,
+  // then past events newest-first under a divider.
+  const upcoming = S.events.filter(e=>e.date >= today && inFilter(e)).sort((a,b)=>a.date.localeCompare(b.date));
+  const past = S.events.filter(e=>e.date < today && inFilter(e)).sort((a,b)=>b.date.localeCompare(a.date));
+  let h = ministryChips();
+  if (S.selectMode){
+    const n = Object.values(S.selected||{}).filter(Boolean).length;
+    h += `<div class="grid2 mb">
+      <button class="btn danger" onclick="deleteSelectedEvents()">Delete selected (${n})</button>
+      <button class="btn quiet" onclick="toggleSelectMode()">Cancel</button>
+    </div>`;
+  } else {
+    h += `<div class="grid2 mb">
+      <button class="btn" onclick="nav({name:'eventForm'})">+ New event</button>
+      ${isAdmin()?'<button class="btn quiet" onclick="toggleSelectMode()">Select…</button>':''}
+    </div>`;
+    const unassigned = multiMinistry() ? S.events.filter(e=>!e.ministryId||e.ministryId==='all').length : 0;
+    if (isAdmin() && unassigned > 0){
+      h += `<div class="card" style="background:#E8EAF1;border-color:#D8DCEA">
+        <div class="name" style="color:var(--navy);font-size:15px">${unassigned} event${unassigned===1?'':'s'} not assigned to a ministry</div>
+        <div class="sub mb">Unassigned events show every student on their attendance list. Assign them all at once:</div>
+        <div class="grid2">
+          <select id="bulk-ministry">${ministries().map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select>
+          <button class="btn small" onclick="bulkAssignEvents()">Assign all</button>
+        </div>
+      </div>`;
+    }
+  }
+  if (!S.events.length) h += '<div class="empty">No events yet. Create one, then take attendance inside it.</div>';
+  const card = e=>{
+    const rec = S.attendance[e.id];
+    const count = rec ? Object.values(rec.present||{}).filter(Boolean).length : 0;
+    if (S.selectMode){
+      return `<div class="card tap" onclick="toggleSelected('${e.id}')">
+        <div class="row">
+          <div class="row" style="justify-content:flex-start;gap:12px">
+            <input type="checkbox" style="width:22px;height:22px" ${S.selected[e.id]?'checked':''} onclick="toggleSelected('${e.id}', event)">
+            <div><div class="name">${esc(e.name)}</div>
+            <div class="sub">${fmtDate(e.date)}</div></div>
+          </div>
+          <div class="name" style="color:var(--navy)">${count} \u2713</div>
+        </div></div>`;
+    }
+    return `<div class="card tap" onclick='nav({name:"event",id:"${e.id}"})'>
+      <div class="row">
+        <div><div class="name">${esc(e.name)}</div>
+        <div class="sub">${fmtDate(e.date)}${multiMinistry()&&e.ministryId&&e.ministryId!=='all'?' · '+esc((ministryById(e.ministryId)||{}).name||''):''}${e.needsPermission?' · needs forms':''}</div></div>
+        <div class="name" style="color:var(--navy)">${count} ✓</div>
+      </div></div>`;
+  };
+  h += upcoming.map(card).join('');
+  if (past.length){
+    if (upcoming.length) h += '<div class="eyebrow" style="margin:14px 0 8px">Past events</div>';
+    h += past.map(card).join('');
+  }
+  return h;
+}
+
+function eventForm(id){
+  const e = S.events.find(x=>x.id===id) || { id:uid(), name:'', date:todayStr(), needsPermission:false };
+  const existing = !!id;
+  const back = existing ? {name:'event', id:e.id} : {name:'tabs'};
+  return backbar(back, existing?'Edit event':'New event') + `
+  <label class="f"><span>Event name</span><input id="f-name" value="${esc(e.name)}" placeholder="e.g. Wednesday night, Lock-in"></label>
+  <label class="f"><span>Date</span><input id="f-date" type="date" value="${esc(e.date)}"></label>
+  ${multiMinistry()?`<label class="f"><span>Which ministry?</span><select id="f-ministry">
+    <option value="all" ${!e.ministryId||e.ministryId==='all'?'selected':''}>All ministries</option>
+    ${ministries().map(m=>`<option value="${m.id}" ${e.ministryId===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}
+  </select></label>`:''}
+  <label class="card row" style="cursor:pointer">
+    <span class="name" style="font-size:15px">Requires a permission form</span>
+    <input id="f-perm" type="checkbox" style="width:22px;height:22px" ${e.needsPermission?'checked':''}>
+  </label>
+  ${!existing?`<div class="card">
+    <div class="name" style="font-size:15px">Repeat weekly (optional)</div>
+    <div class="sub mb">Great for Wednesday nights — creates a copy every week through the date you pick.</div>
+    <input id="f-repeat" type="date">
+  </div>`:''}
+  <button class="btn full mt" onclick="saveEvent('${e.id}')">Save event</button>
+  ${existing?`<button class="btn full danger mt" onclick="deleteEvent('${e.id}')">Delete event</button>`:''}`;
+}
+
+function eventDetail(id){
+  const e = S.events.find(x=>x.id===id);
+  if (!e) return '<div class="empty">Event not found.</div>';
+  const rec = S.attendance[id] || {present:{}, permission:{}};
+  const presentCount = Object.values(rec.present||{}).filter(Boolean).length;
+  const permCount = Object.values(rec.permission||{}).filter(Boolean).length;
+  const roster = activeStudents().filter(s =>
+    !e.ministryId || e.ministryId==='all' ||
+    s.grade==='?' ||                       // visitors with unknown grade always show
+    (ministryFor(s) && ministryFor(s).id === e.ministryId));
+  const sorted = roster.sort((a,b)=>a.name.localeCompare(b.name));
+  let rows = sorted.map(s=>{
+    const visits = s.visitor ? S.events.filter(ev=>S.attendance[ev.id]?.present?.[s.id]).length : 0;
+    return `
+    <div class="card" style="padding:12px 16px">
+      <div class="row">
+        <div><div class="name" style="font-size:15px">${esc(s.name)}</div>
+        <div class="sub">${s.grade==='K'?'K':s.grade==='?'?'Gr ?':'Gr '+s.grade}${s.visitor?' · visitor'+(visits>0?' ('+visits+(visits===1?'st':visits===2?'nd':visits===3?'rd':'th')+' visit)':''):''}${s.allergies?' · ⚠ '+esc(s.allergies):''}</div></div>
+        <div style="display:flex;gap:8px">
+          ${e.needsPermission?`<button class="btn small ${rec.permission?.[s.id]?'green':'off'}" onclick="toggleAtt('${id}','permission','${s.id}')">Form</button>`:''}
+          <button class="btn small ${rec.present?.[s.id]?'':'off'}" onclick="toggleAtt('${id}','present','${s.id}')">Here</button>
+        </div>
+      </div>
+    </div>`;}).join('');
+  if (!sorted.length) rows = '<div class="empty">Add students first, then take attendance here.</div>';
+  return backbar({name:'tabs'}, e.name,
+      `<button class="btn quiet small" onclick='nav({name:"eventForm",id:"${e.id}"})'>Edit</button>`) + `
+  <div class="card">
+    <div class="sub">${fmtDate(e.date)}</div>
+    <div class="name" style="font-size:17px;color:var(--navy)">${presentCount} present${e.needsPermission?' · '+permCount+' forms in':''}</div>
+  </div>
+  <div class="grid2 mb">
+    <button class="btn small quiet" onclick='nav({name:"safety",id:"${e.id}"})'>Safety sheet</button>
+    <button class="btn small quiet" onclick="copyParentNumbers('${e.id}')">Copy parent #s</button>
+    <button class="btn small quiet" onclick="addVisitor('${e.id}')">+ Visitor</button>
+  </div>` + rows;
+}
+
+function volunteersList(){
+  let h = `<button class="btn full mb" onclick="nav({name:'volunteerForm'})">+ New volunteer</button>`;
+  if (!S.volunteers.length) h += '<div class="empty">No volunteers yet.</div>';
+  h += S.volunteers.map(v=>`
+    <div class="card tap" onclick='nav({name:"volunteerForm",id:"${v.id}"})'>
+      <div class="row">
+        <div><div class="name">${esc(v.name)}</div>
+        <div class="sub">${esc(v.role||'')}${v.notes?' · '+esc(v.notes):''}</div></div>
+        ${v.phone?`<a class="tel" href="tel:${esc(v.phone)}" onclick="event.stopPropagation()">${esc(v.phone)}</a>`:''}
+      </div></div>`).join('');
+  return h;
+}
+
+function volunteerForm(id){
+  const v = S.volunteers.find(x=>x.id===id) || { id:uid(), name:'', role:'', phone:'', notes:'' };
+  const existing = !!id;
+  return backbar({name:'tabs'}, existing?'Edit volunteer':'New volunteer') + `
+  <label class="f"><span>Name</span><input id="f-name" value="${esc(v.name)}"></label>
+  <label class="f"><span>Role</span><input id="f-role" value="${esc(v.role)}" placeholder="e.g. Middle school leader, Snacks, AV"></label>
+  <label class="f"><span>Phone</span><input id="f-phone" type="tel" value="${esc(v.phone)}"></label>
+  <label class="f"><span>Notes</span><input id="f-notes" value="${esc(v.notes)}" placeholder="Availability, background check date…"></label>
+  <button class="btn full" onclick="saveVolunteer('${v.id}')">Save volunteer</button>
+  ${existing?`<button class="btn full danger mt" onclick="deleteVolunteer('${v.id}')">Remove volunteer</button>`:''}`;
+}
+
+function userForm(id){
+  const u = S.users.find(x=>x.id===id);
+  const existing = !!u;
+  const isSelf = u && S.me && u.id === S.me.id;
+  return backbar({name:'tabs'}, existing ? 'Edit account' : 'New account') + `
+  <div class="card">
+    <label class="f"><span>Name</span><input id="u-name" value="${esc(u?u.name:'')}" placeholder="e.g. Sarah"></label>
+    ${existing
+      ? `<label class="f"><span>Username</span><input value="${esc(u.username)}" disabled></label>`
+      : `<label class="f"><span>Username (what they type to sign in)</span><input id="u-user" autocapitalize="none" placeholder="e.g. sarah"></label>`}
+    <label class="f"><span>Role</span><select id="u-role">
+      <option value="leader" ${u&&u.role==='leader'?'selected':''}>Leader — everyday use</option>
+      <option value="admin" ${u&&u.role==='admin'?'selected':''}>Admin — can also manage accounts &amp; settings</option>
+    </select></label>
+    <label class="f"><span>${existing?'New password (leave blank to keep current)':'Password (8+ characters)'}</span>
+      <input id="u-pw" type="password" autocomplete="new-password"></label>
+    <button class="btn full" onclick="saveUser(${existing?`'${u.id}'`:'null'})">Save account</button>
+    ${existing && !isSelf ? `<button class="btn full danger mt" onclick="deleteUser('${u.id}')">Remove account</button>` : ''}
+    ${isSelf ? '<p class="sub" style="font-size:13px">This is your own account — you can rename it or change your password, but not remove it.</p>' : ''}
+  </div>`;
+}
+
+function safetySheet(id){
+  const e = S.events.find(x=>x.id===id);
+  if (!e) return '<div class="empty">Event not found.</div>';
+  const rec = S.attendance[id] || {present:{}};
+  const anyPresent = Object.values(rec.present||{}).some(Boolean);
+  const onlyChecked = S.safetyChecked && anyPresent;
+  const pool = activeStudents()
+    .filter(s => onlyChecked ? rec.present?.[s.id] : true)
+    .sort(byGradeName);
+  const cards = pool.map(s=>{
+    const g = (s.guardians||[]).map(x=>`${esc(x.name)}${x.relation?' ('+esc(x.relation)+')':''}${x.phone?' — '+esc(x.phone):''}`).join('<br>');
+    return `<div class="card">
+      <div class="row"><div class="name">${esc(s.name)}</div>
+      <div class="sub">${gradeLabel(s.grade)}${s.birthdate?' · age '+calcAge(s.birthdate):''}</div></div>
+      ${s.allergies?`<div class="alertbox">⚠ Allergies: ${esc(s.allergies)}</div>`:''}
+      ${s.medical?`<div class="alertbox">⚕ ${esc(s.medical)}</div>`:''}
+      ${s.photoConsent==='no'?'<div class="alertbox">📷 No photos</div>':''}
+      <div class="sub mt" style="font-size:13px">${g||'No guardians listed'}</div>
+      ${(s.emergencyName||s.emergencyPhone)?`<div class="sub" style="font-size:13px"><b>Emergency:</b> ${esc(s.emergencyName||'')} ${esc(s.emergencyPhone||'')}</div>`:''}
+    </div>`;
+  }).join('') || '<div class="empty">No students to show.</div>';
+  return `<div class="no-print">` +
+    backbar({name:'event', id}, 'Safety sheet') + `
+    <div class="grid2 mb">
+      <button class="btn small ${onlyChecked?'':'off'}" ${anyPresent?'':'disabled'} onclick="S.safetyChecked=true;render()">Checked-in only</button>
+      <button class="btn small ${!onlyChecked?'':'off'}" onclick="S.safetyChecked=false;render()">Everyone</button>
+    </div>
+    <button class="btn full mb" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  <div class="card">
+    <div class="name">${esc(e.name)} — ${fmtDate(e.date)}</div>
+    <div class="sub">${esc(S.settings.churchName)} · ${pool.length} student${pool.length===1?'':'s'} · allergies, medical &amp; emergency contacts</div>
+  </div>` + cards;
+}
+
+function reportEvents(weeks){
+  const cutoff = addDays(todayStr(), -7*weeks);
+  return pastEvents().filter(e=>e.date >= cutoff);
+}
+
+function attendanceReport(){
+  const weeks = S.reportWeeks || 13;
+  const f = S.ministryFilter || 'all';
+  const inFilter = e => f==='all' || !e.ministryId || e.ministryId==='all' || e.ministryId===f;
+  const evs = reportEvents(weeks).filter(inFilter);
+  const kids = activeStudents()
+    .filter(s => f==='all' || (ministryFor(s) && ministryFor(s).id === f))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  const countFor = e => Object.values(S.attendance[e.id]?.present||{}).filter(Boolean).length;
+
+  // summary numbers, plus comparison with the same-length period before this one
+  const counts = evs.map(countFor);
+  const avg = counts.length ? Math.round(counts.reduce((a,b)=>a+b,0)/counts.length*10)/10 : 0;
+  const peak = counts.length ? Math.max(...counts) : 0;
+  const prevEvs = pastEvents().filter(e=>e.date >= addDays(todayStr(), -14*weeks) && e.date < addDays(todayStr(), -7*weeks));
+  const prevCounts = prevEvs.map(countFor);
+  const prevAvg = prevCounts.length ? prevCounts.reduce((a,b)=>a+b,0)/prevCounts.length : null;
+  let change = '';
+  if (prevAvg && avg){
+    const pct = Math.round((avg - prevAvg)/prevAvg*100);
+    change = ` · ${pct>=0?'+':''}${pct}% vs previous ${weeks} weeks`;
+  }
+
+  // week-by-week table
+  const weekRows = evs.map(e=>`<tr>
+    <td class="l">${fmtDate(e.date)}</td>
+    <td class="l">${esc(e.name)}</td>
+    <td>${countFor(e)}</td></tr>`).join('');
+
+  // student-by-event grid (its own printed page)
+  const gridHead = evs.map(e=>{
+    const [y,m,d]=e.date.split('-');
+    return `<th title="${esc(e.name)}">${Number(m)}/${Number(d)}</th>`;
+  }).join('');
+  const gridRows = kids.map(s=>{
+    let total = 0;
+    const cells = evs.map(e=>{
+      const here = S.attendance[e.id]?.present?.[s.id];
+      if (here) total++;
+      return `<td>${here?'\u2713':''}</td>`;
+    }).join('');
+    return `<tr><td class="l">${esc(s.name)}${s.visitor?' (v)':''}</td>${cells}<td><b>${total}</b></td></tr>`;
+  }).join('');
+  const gridTotals = `<tr class="total"><td class="l">Total</td>${evs.map(e=>`<td>${countFor(e)}</td>`).join('')}<td></td></tr>`;
+
+  const rangeBtn = w => `<button class="btn small ${weeks===w?'':'quiet'}" onclick="S.reportWeeks=${w};render()">${w} wks</button>`;
+
+  return backbar({name:'tabs'}, 'Attendance report',
+      `<button class="btn small no-print" onclick="window.print()">Print</button>`) + `
+  <div class="no-print grid2 mb">${rangeBtn(13)}${rangeBtn(26)}${rangeBtn(52)}</div>
+  <div class="no-print">${ministryChips()}</div>
+
+  <div class="eyebrow">${esc(S.settings.churchName)} — ${esc(S.settings.ministryName)}</div>
+  <h1 style="margin-bottom:4px">Attendance Report</h1>
+  <div class="sub mb">${f!=='all'&&ministryById(f)?esc(ministryById(f).name)+' · ':''}Last ${weeks} weeks · prepared ${fmtDate(todayStr())}</div>
+
+  <div class="card">
+    <div class="name mb">Summary</div>
+    <div class="sub" style="font-size:14px">
+      ${evs.length} events · ${kids.length} active students on the roster<br>
+      Average attendance: <b>${avg}</b> per event${change}<br>
+      Best-attended: <b>${peak}</b>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="name mb">Week by week</div>
+    ${evs.length ? `<table class="rpt-table">
+      <tr><th class="l">Date</th><th class="l">Event</th><th>Present</th></tr>
+      ${weekRows}</table>` : '<div class="sub">No events in this period.</div>'}
+  </div>
+
+  ${trendsHTML()}
+
+  <div class="pagebreak"></div>
+  <div class="card">
+    <div class="name mb">Student attendance grid</div>
+    <div class="sub mb" style="font-size:12px">\u2713 = present · (v) = visitor · last column is each student's total</div>
+    ${evs.length && kids.length ? `<div style="overflow-x:auto"><table class="rpt-table">
+      <tr><th class="l">Student</th>${gridHead}<th>Total</th></tr>
+      ${gridRows}${gridTotals}</table></div>` : '<div class="sub">Nothing to show yet.</div>'}
+  </div>`;
+}
+
+function trendsHTML(){
+  const pe = pastEvents();
+  const byMonth = {};
+  pe.forEach(e=>{
+    const n = Object.values(S.attendance[e.id]?.present||{}).filter(Boolean).length;
+    (byMonth[e.date.slice(0,7)] = byMonth[e.date.slice(0,7)] || []).push(n);
+  });
+  const keys = Object.keys(byMonth).sort().slice(-8);
+  if (keys.length < 2) return '';
+  const avgs = keys.map(k=>({k, avg: Math.round(byMonth[k].reduce((a,b)=>a+b,0)/byMonth[k].length*10)/10}));
+  const max = Math.max(...avgs.map(a=>a.avg), 1);
+  const bars = avgs.map(a=>{
+    const [y,m] = a.k.split('-');
+    const label = new Date(y, m-1, 1).toLocaleDateString(undefined,{month:'short'}) + ' \u2019' + String(y).slice(2);
+    return `<div class="row" style="margin-bottom:6px">
+      <div class="sub" style="width:62px">${label}</div>
+      <div class="grow" style="background:#EEF0F5;border-radius:6px;height:18px">
+        <div style="width:${Math.max(4, a.avg/max*100)}%;background:var(--navy);height:18px;border-radius:6px"></div>
+      </div>
+      <div class="sub" style="width:34px;text-align:right;font-weight:700">${a.avg}</div>
+    </div>`;
+  }).join('');
+  return `<div class="card">
+    <div class="name mb">Attendance trends</div>
+    <div class="sub mb" style="font-size:13px">Average kids per event, by month — handy for leadership conversations.</div>
+    ${bars}
+  </div>`;
+}
+
+function upcomingBirthdaysHTML(){
+  const now = new Date();
+  const upcoming = activeStudents()
+    .filter(s=>s.birthdate)
+    .map(s=>{
+      const [y,m,d] = s.birthdate.split('-').map(Number);
+      let next = new Date(now.getFullYear(), m-1, d);
+      if (next < new Date(now.getFullYear(), now.getMonth(), now.getDate())) next = new Date(now.getFullYear()+1, m-1, d);
+      const days = Math.round((next - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+      return {s, next, days, turning: next.getFullYear() - y};
+    })
+    .filter(b=>b.days <= 30)
+    .sort((a,b)=>a.days-b.days);
+  if (!upcoming.length) return '';
+  return `
+  <div class="card">
+    <div class="name mb">🎂 Birthdays in the next 30 days</div>
+    ${upcoming.map(b=>`
+      <div class="row" style="padding:5px 0">
+        <button class="link" style="font-size:15px" onclick='nav({name:"student",id:"${b.s.id}"})'>${esc(b.s.name)}</button>
+        <div class="sub" style="margin:0">${b.days===0?'today!':b.days===1?'tomorrow':fmtBirthday(b.s.birthdate)+' · in '+b.days+' days'} · turning ${b.turning}</div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function moreTab(){
+  let h = `
+  <div class="card">
+    <div class="name mb">At a glance</div>
+    <div class="sub" style="font-size:14px">${activeStudents().length} active students · ${S.events.length} events · ${S.volunteers.length} volunteers</div>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div><div class="name">Attendance report</div>
+      <div class="sub">Week-by-week numbers, trends, and a per-student grid — print-ready for leadership.</div></div>
+      <button class="btn small" onclick="nav({name:'report'})">Open</button>
+    </div>
+  </div>` + upcomingBirthdaysHTML() + trendsHTML() + `
+  <div class="card">
+    <div class="row">
+      <div><div class="name">${esc(S.me.name)}</div>
+      <div class="sub">Signed in as ${esc(S.me.username)} · ${S.me.role}</div></div>
+      <button class="btn small quiet" onclick="signOut()">Sign out</button>
+    </div>
+  </div>`;
+
+  if (isAdmin()){
+    h += `
+  <div class="card">
+    <div class="name mb">Promotion Sunday</div>
+    <p class="sub" style="font-size:14px">Usually the last Sunday of May. One tap moves every active student up a grade and graduates the seniors (archived with history kept). A reminder banner shows on the Students tab when it's time.${S.settings.lastPromotionYear?' Last done: '+esc(S.settings.lastPromotionYear)+'.':''}</p>
+    <button class="btn small mt" onclick="promoteAll()">Promote everyone now</button>
+  </div>`;
+  }
+
+  if (isAdmin()){
+    h += `
+  <div class="card">
+    <div class="name mb">Team accounts</div>
+    ${S.users.map(u=>`
+      <div class="row" style="padding:6px 0">
+        <div><div class="name" style="font-size:15px">${esc(u.name)}</div>
+        <div class="sub">${esc(u.username)} · ${u.role}</div></div>
+        <button class="btn small quiet" onclick='nav({name:"userForm",id:"${u.id}"})'>Edit</button>
+      </div>`).join('')}
+    <button class="btn small mt" onclick="nav({name:'userForm'})">+ Add a person</button>
+  </div>
+  <div class="card">
+    <div class="name mb">Church settings</div>
+    <label class="f"><span>Church name</span><input id="set-church" value="${esc(S.settings.churchName)}"></label>
+    <label class="f"><span>Ministries (name + grade range)</span></label>
+    <div id="m-rows">${ministries().map(ministryRowHTML).join('')}</div>
+    <button class="btn quiet small mb" onclick="addMinistryRow()">+ Add another ministry</button>
+    <p class="sub mb" style="font-size:12px">Clear a ministry's name to remove it. Kids belong to a ministry by their grade — no re-assigning needed.</p>
+    <button class="btn small" onclick="saveSettings()">Save settings</button>
+  </div>`;
+  }
+
+  if (isAdmin()){
+    h += `
+  <div class="card">
+    <div class="name mb">Backup &amp; restore</div>
+    <p class="sub" style="font-size:14px">Download backup saves all ministry data as one file — keep a copy somewhere safe.
+    To restore, paste a backup file\u2019s contents below and tap Restore. Restoring never touches sign-in accounts.</p>
+    <div class="grid2 mb" style="margin-top:10px">
+      <a class="btn small" style="text-align:center;text-decoration:none" href="/api/export" download>Download backup</a>
+      <button class="btn small quiet" onclick="restoreBackup()">Restore</button>
+    </div>
+    <p class="sub" style="font-size:13px">The Pi also backs itself up automatically every night (keeps 30 days). Spreadsheets for the office or elder reports:</p>
+    <div class="grid2 mb">
+      <a class="btn small quiet" style="text-align:center;text-decoration:none" href="/api/export/students.csv" download>Students CSV</a>
+      <a class="btn small quiet" style="text-align:center;text-decoration:none" href="/api/export/attendance.csv" download>Attendance CSV</a>
+    </div>
+    <textarea id="import-text" rows="5" placeholder="Paste a backup here to restore"></textarea>
+  </div>`;
+  }
+  h += `<div class="empty" style="padding:16px">Church Youth Manager v${esc(S.version||'')}</div>`;
+  return h;
+}
+
+// ------------------------------------------------------------------
+// Root render
+// ------------------------------------------------------------------
+function render(){
+  const app = document.getElementById('app');
+  if (!S.booted){ app.innerHTML = '<div class="empty">Loading…</div>'; return; }
+  if (S.needsSetup){ app.innerHTML = setupView(); return; }
+  if (!S.authed){ app.innerHTML = loginView(); return; }
+  let body = '';
+  const v = S.view;
+  if (v.name === 'tabs'){
+    body = header();
+    if (S.tab === 'students') body += studentsList();
+    if (S.tab === 'events') body += eventsList();
+    if (S.tab === 'volunteers') body += volunteersList();
+    if (S.tab === 'more') body += moreTab();
+    body += `<div class="tabs"><div class="inner">
+      <button class="${S.tab==='students'?'on':''}" onclick="setTab('students')">Students</button>
+      <button class="${S.tab==='events'?'on':''}" onclick="setTab('events')">Events</button>
+      <button class="${S.tab==='volunteers'?'on':''}" onclick="setTab('volunteers')">Volunteers</button>
+      <button class="${S.tab==='more'?'on':''}" onclick="setTab('more')">More</button>
+    </div></div>`;
+  }
+  else if (v.name === 'student') body = studentDetail(v.id);
+  else if (v.name === 'studentForm') body = studentForm(v.id);
+  else if (v.name === 'event') body = eventDetail(v.id);
+  else if (v.name === 'eventForm') body = eventForm(v.id);
+  else if (v.name === 'volunteerForm') body = volunteerForm(v.id);
+  else if (v.name === 'userForm') body = userForm(v.id);
+  else if (v.name === 'safety') body = safetySheet(v.id);
+  else if (v.name === 'report') body = attendanceReport();
+  app.innerHTML = body;
+}
+
+boot();
+</script>
+</body>
+</html>

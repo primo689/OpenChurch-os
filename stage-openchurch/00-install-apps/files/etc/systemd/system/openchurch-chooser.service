@@ -1,0 +1,13 @@
+[Unit]
+Description=Open Church OS first-boot chooser
+After=network.target
+# Tamper resistance: once a choice is recorded, this unit refuses to start,
+# even if enabled. Re-arming it requires root:  sudo openchurch chooser-reset
+ConditionPathExists=!/etc/openchurch/selected
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/openchurch/chooser/chooser.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

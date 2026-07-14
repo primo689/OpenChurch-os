@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Youth dashboard · {{ church_name }}{% endblock %}
+{% block content %}
+<h1>Youth dashboard</h1>
+
+<div class="cards">
+  <div class="card stat"><div class="big">{{ n_students }}</div>Active students</div>
+  {% for m, c in counts %}
+  <div class="card stat"><div class="big">{{ c }}</div>{{ m.name }}
+    <span class="muted" style="font-size:12px">({{ m.grade_from | gradelabel }}–{{ m.grade_to | gradelabel }})</span></div>
+  {% endfor %}
+</div>
+
+<div class="cols">
+  <div>
+    <h2>Baptism follow-up</h2>
+    <div class="card">
+      {% for s in baptism_watch %}
+      <div style="padding:3px 0"><a href="{{ url_for('member_view', mid=s.id) }}">{{ s.first_name }} {{ s.last_name }}</a>
+        <span class="muted" style="font-size:12.5px">· {{ s.grade | gradelabel }}</span></div>
+      {% else %}<p class="muted" style="margin:0">Nobody mid-conversation right now. When a note is marked
+        "Baptism conversation," the student shows up here until their baptism date is recorded.</p>{% endfor %}
+    </div>
+
+    <h2>Visitors to follow up</h2>
+    <div class="card">
+      {% for s in visitor_watch %}
+      <div style="padding:3px 0"><a href="{{ url_for('member_view', mid=s.id) }}">{{ s.first_name }} {{ s.last_name }}</a>
+        <span class="muted" style="font-size:12.5px">· seen in the last 30 days</span></div>
+      {% else %}<p class="muted" style="margin:0">No recent visitors on the books.</p>{% endfor %}
+    </div>
+
+    <h2>Student birthdays (next 2 weeks)</h2>
+    <div class="card">
+      {% for s in bdays %}
+      <div style="padding:3px 0"><a href="{{ url_for('member_view', mid=s.id) }}">{{ s.first_name }} {{ s.last_name }}</a>
+        <span class="muted" style="font-size:12.5px">· {{ s.birthdate | nicedate }}</span></div>
+      {% else %}<p class="muted" style="margin:0">None coming up.</p>{% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <h2>Coming up</h2>
+    <div class="card">
+      {% for e in upcoming_events %}
+      <div style="padding:3px 0"><a href="{{ url_for('youth_event_view', eid=e.id) }}">{{ e.name }}</a>
+        <span class="muted" style="font-size:12.5px">· {{ e.date | nicedate }}{% if e.ministry %} · {{ e.ministry }}{% endif %}</span>
+        {% if e.permission_required %}<span class="tag amber">Slips</span>{% endif %}</div>
+      {% else %}<p class="muted" style="margin:0">Nothing scheduled.
+        <a href="{{ url_for('youth_events') }}">Create an event</a>.</p>{% endfor %}
+    </div>
+
+    <h2>Recent check-ins</h2>
+    <div class="card">
+      {% for e in last_checkins %}
+      <div style="padding:3px 0">{{ e.name }} <span class="muted" style="font-size:12.5px">·
+        {{ e.date | nicedate }} · {{ e.c }} present</span></div>
+      {% else %}<p class="muted" style="margin:0">No check-ins yet.</p>{% endfor %}
+    </div>
+
+    <h2>Quick actions</h2>
+    <div class="card no-print">
+      <a class="btn" href="{{ url_for('youth_events') }}">Take check-in</a>
+      <a class="btn quiet" href="{{ url_for('youth') }}">Roster</a>
+      <a class="btn quiet" href="{{ url_for('youth_new') }}">Add student</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

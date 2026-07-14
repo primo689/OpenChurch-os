@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ year }} Giving Statement — {{ m.first_name }} {{ m.last_name }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main style="max-width:720px;margin:30px auto;padding:0 20px">
+  <p class="no-print"><a href="{{ url_for('member_view', mid=m.id) }}">&larr; Back</a>
+    · <button class="small" onclick="window.print()">Print</button></p>
+  <h1 style="font-family:var(--serif)">{{ church_name }}</h1>
+  <p class="muted">{{ city }}</p>
+  <h2 style="border:none">Statement of Contributions — {{ year }}</h2>
+  <p><strong>{{ m.first_name }} {{ m.last_name }}</strong><br>{{ m.address }}</p>
+
+  <table>
+    <tr><th>Date</th><th>Fund</th><th>Method</th><th class="num">Amount</th></tr>
+    {% for g in gifts %}
+    <tr><td>{{ g.date | nicedate }}</td><td>{{ g.fund }}</td><td>{{ g.method }}</td>
+        <td class="num">{{ g.amount_cents | money }}</td></tr>
+    {% endfor %}
+    <tr><td colspan="3"><strong>Total</strong></td><td class="num"><strong>{{ total | money }}</strong></td></tr>
+  </table>
+
+  <h2 style="border:none">Totals by fund</h2>
+  <table>
+    {% for f in by_fund %}<tr><td>{{ f.name }}</td><td class="num">{{ f.t | money }}</td></tr>{% endfor %}
+  </table>
+
+  <p class="muted" style="margin-top:24px;font-size:13px">No goods or services were provided in exchange
+  for these contributions other than intangible religious benefits. Please keep this statement for your tax records.</p>
+</main>
+</body>
+</html>

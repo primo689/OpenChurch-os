@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Members</h1>
+<p class="sub">{{ rows | length }} shown</p>
+
+<form method="get" class="card no-print">
+  <div class="row">
+    <div style="flex:2"><label for="q">Search name, email, phone, or address</label>
+      <input type="text" id="q" name="q" value="{{ q }}" placeholder="Start typing…" autofocus></div>
+    <div><label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="">Any</option>
+        {% for s in statuses %}<option {{ 'selected' if s==status }}>{{ s }}</option>{% endfor %}
+      </select></div>
+    <div><label for="membership">Membership</label>
+      <select id="membership" name="membership">
+        <option value="">Anyone</option>
+        <option value="members" {{ 'selected' if membership=='members' }}>Members only</option>
+        <option value="nonmembers" {{ 'selected' if membership=='nonmembers' }}>Non-members only</option>
+      </select></div>
+    <div><label for="role">Serving role</label>
+      <select id="role" name="role">
+        <option value="">Any</option>
+        {% for r in roles %}<option value="{{ r.id }}" {{ 'selected' if r.id|string==role_id }}>{{ r.name }}</option>{% endfor %}
+      </select></div>
+  </div>
+  <button>Search</button>
+  {% if 'members.edit' in perms %}<a class="btn quiet" href="{{ url_for('member_new') }}">Add member</a>{% endif %}
+</form>
+
+<table>
+  <tr><th>Name</th><th>Status</th><th>Phone</th><th>Email</th><th>Address</th></tr>
+  {% for m in rows %}
+  <tr>
+    <td><a href="{{ url_for('member_view', mid=m.id) }}">{{ m.last_name }}, {{ m.first_name }}</a>
+        {% if m.leadership_role %}<span class="tag amber">{{ m.leadership_role }}</span>{% endif %}
+        {% if m.is_member %}<span class="tag">Member</span>{% endif %}</td>
+    <td class="status-{{ m.status }}">{{ m.status }}</td>
+    <td>{{ m.phone }}</td><td>{{ m.email }}</td><td>{{ m.address }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5" class="muted">No members match. Try a shorter search, or add the first member.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

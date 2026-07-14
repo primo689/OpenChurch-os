@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ ev.name }} · {{ church_name }}{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center">
+  <h1>{{ ev.name }}</h1>
+  <a class="btn quiet no-print" href="{{ url_for('youth_events') }}">All events</a>
+</div>
+<p class="sub">{{ ev.date | nicedate }}{% if ev.detail %} · {{ ev.detail }}{% endif %}
+  {% if ev.ministry %} · {{ ev.ministry }} roster{% endif %}
+  {% if ev.permission_required %}<span class="tag amber">Permission slips required</span>{% endif %}</p>
+
+<p class="muted" style="font-size:12.5px">Each tap saves on its own, straight away —
+two people can check kids in from two phones at the same time without stepping on
+each other. <span id="savestate"></span></p>
+
+<div class="roster" id="roster">
+  {% for s in roster %}
+  <label style="display:flex;align-items:center;gap:6px">
+    <input type="checkbox" data-mid="{{ s.id }}" data-field="present" {{ 'checked' if s.id in present }}>
+    {{ s.last_name }}, {{ s.first_name }}
+    <span class="muted" style="font-size:12px">{{ s.grade if s.grade != '?' else '' }}</span>
+    {% if s.status == 'Visitor' %}<span class="tag amber">V</span>{% endif %}
+    {% if s.allergies %}<span class="tag amber">A</span>{% endif %}
+    {% if ev.permission_required %}
+    <span style="margin-left:auto;font-size:12px;white-space:nowrap">
+      slip <input type="checkbox" data-mid="{{ s.id }}" data-field="permission" {{ 'checked' if s.id in slips }}></span>
+    {% endif %}
+  </label>
+  {% endfor %}
+</div>
+{% if not roster %}<p class="muted">Add students on the <a href="{{ url_for('youth') }}">roster</a> first, then check them in here.</p>{% endif %}
+
+<h2>Walk-in visitor?</h2>
+<form method="post" class="card no-print">{{ csrf() }}
+  <input type="hidden" name="action" value="visitor">
+  <div class="row">
+    <div><label for="vfirst">First name</label><input type="text" id="vfirst" name="first_name"></div>
+    <div><label for="vlast">Last name</label><input type="text" id="vlast" name="last_name"></div>
+  </div>
+  <button class="small">Add visitor and mark present</button>
+  <span class="muted">Creates them as a student marked Visitor; fill in guardians later.</span>
+</form>
+
+<div class="card no-print" style="margin-top:16px">
+  <form method="post" onsubmit="return confirm('Delete ' + {{ ev.name | tojson }} + ' and its check-ins? This cannot be undone.')">{{ csrf() }}
+    <input type="hidden" name="action" value="delete">
+    <button class="danger small">Delete event</button>
+  </form>
+</div>
+
+<script>
+var state = document.getElementById('savestate');
+document.getElementById('roster').addEventListener('change', function (e) {
+  var box = e.target;
+  if (!box.dataset.mid) return;
+  box.disabled = true;
+  state.textContent = 'Saving…';
+  fetch('{{ url_for("youth_event_toggle", eid=ev.id) }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+    body: JSON.stringify({member_id: parseInt(box.dataset.mid, 10),
+                          field: box.dataset.field,
+                          csrf_token: '{{ session["csrf"] }}'})
+  }).then(function (r) {
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }).then(function (d) {
+    // Reflect the server's answer, whichever box was tapped: a slip
+    // hand-in also marks the student present.
+    var row = box.closest('label');
+    row.querySelectorAll('input').forEach(function (i) {
+      i.checked = (i.dataset.field === 'present') ? d.present : d.permission;
+    });
+    state.textContent = 'Saved.';
+    if (d.nudge) {
+      var f = document.createElement('div');
+      f.className = 'flash';
+      f.textContent = d.nudge;
+      document.querySelector('main').prepend(f);
+    }
+  }).catch(function () {
+    box.checked = !box.checked;
+    state.textContent = 'Could not save — check the network and tap again.';
+  }).finally(function () { box.disabled = false; });
+});
+</script>
+{% endblock %}

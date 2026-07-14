@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit student' if m else 'Add student' }} · {{ church_name }}{% endblock %}
+{% block content %}
+<h1>{{ m.first_name ~ ' ' ~ m.last_name if m else 'Add student' }}</h1>
+{% if m %}<p class="sub">Youth profile. Contact info, membership dates, and the baptism date live on the
+  <a href="{{ url_for('member_view', mid=m.id) }}">member record</a>.</p>{% endif %}
+
+<form method="post" class="card" style="max-width:640px">{{ csrf() }}
+  <div class="row">
+    <div><label>First name *</label>
+      <input type="text" name="first_name" required value="{{ v.get('first_name', m.first_name if m else '') }}"></div>
+    <div><label>Last name *</label>
+      <input type="text" name="last_name" required value="{{ v.get('last_name', m.last_name if m else '') }}"></div>
+  </div>
+  <div class="row">
+    <div><label>Grade</label>
+      <select name="grade">
+        {% set cur = v.get('grade', yp.grade if yp else '6') %}
+        {% for g in grades %}<option value="{{ g }}" {{ 'selected' if g == cur }}>{{ g | gradelabel }}</option>{% endfor %}
+        <option value="?" {{ 'selected' if cur == '?' }}>Not sure yet</option>
+      </select></div>
+    <div><label>Birthdate</label>
+      <input type="date" name="birthdate" value="{{ v.get('birthdate', m.birthdate if m else '') }}"></div>
+  </div>
+  <label style="display:flex;align-items:center;gap:8px;margin:10px 0">
+    <input type="checkbox" name="visitor" style="width:18px;height:18px"
+      {{ 'checked' if v.get('visitor') or (m and m.status == 'Visitor' and not v) }}>
+    Still a visitor
+  </label>
+
+  <h2>Guardians</h2>
+  <div id="guardians">
+    {% for g in gdns %}
+    <div class="row g-row">
+      <div><input type="text" name="g_name" placeholder="Guardian name" value="{{ g.name }}"></div>
+      <div><input type="text" name="g_relation" placeholder="Relation (Mom…)" value="{{ g.relation }}"></div>
+      <div><input type="tel" name="g_phone" placeholder="Phone" value="{{ g.phone }}"></div>
+    </div>
+    {% endfor %}
+    <div class="row g-row">
+      <div><input type="text" name="g_name" placeholder="Guardian name"></div>
+      <div><input type="text" name="g_relation" placeholder="Relation (Mom…)"></div>
+      <div><input type="tel" name="g_phone" placeholder="Phone"></div>
+    </div>
+  </div>
+  <button type="button" class="small quiet btn" onclick="addGuardian()">+ Another guardian</button>
+
+  <h2>Care details</h2>
+  <label>Allergies</label>
+  <input type="text" name="allergies" placeholder="e.g. peanuts" value="{{ v.get('allergies', yp.allergies if yp else '') }}">
+  <label>Medical / other needs</label>
+  <input type="text" name="medical" placeholder="e.g. inhaler in backpack" value="{{ v.get('medical', yp.medical if yp else '') }}">
+  <label>Photo consent (for social media &amp; slideshows)</label>
+  {% set pc = v.get('photo_consent', yp.photo_consent if yp else '') %}
+  <select name="photo_consent">
+    <option value="" {{ 'selected' if not pc }}>Not asked yet</option>
+    <option value="yes" {{ 'selected' if pc == 'yes' }}>Yes — photos OK</option>
+    <option value="no" {{ 'selected' if pc == 'no' }}>No — don't post photos</option>
+  </select>
+  <div class="row">
+    <div><label>Emergency contact name</label>
+      <input type="text" name="emergency_name" value="{{ v.get('emergency_name', yp.emergency_name if yp else '') }}"></div>
+    <div><label>Emergency contact phone</label>
+      <input type="tel" name="emergency_phone" value="{{ v.get('emergency_phone', yp.emergency_phone if yp else '') }}"></div>
+  </div>
+
+  <div style="margin-top:14px">
+    <button>Save student</button>
+    <a class="btn quiet" href="{{ url_for('member_view', mid=m.id) if m else url_for('youth') }}">Cancel</a>
+  </div>
+</form>
+
+<script>
+function addGuardian(){
+  var row = document.createElement('div');
+  row.className = 'row g-row';
+  row.innerHTML = '<div><input type="text" name="g_name" placeholder="Guardian name"></div>' +
+    '<div><input type="text" name="g_relation" placeholder="Relation (Mom…)"></div>' +
+    '<div><input type="tel" name="g_phone" placeholder="Phone"></div>';
+  document.getElementById('guardians').appendChild(row);
+}
+</script>
+{% endblock %}

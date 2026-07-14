@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}{{ m.first_name }} {{ m.last_name }}{% endblock %}
+{% block content %}
+<div style="display:flex;gap:18px;align-items:flex-start">
+  {% if m.photo %}<img class="avatar" src="{{ url_for('photo', fname=m.photo) }}" alt="Photo of {{ m.first_name }}">
+  {% else %}<div class="avatar ph">{{ m.first_name[0] }}{{ m.last_name[0] }}</div>{% endif %}
+  <div style="flex:1">
+    <h1>{{ m.first_name }} {{ m.last_name }}
+      {% if m.leadership_role %}<span class="tag amber">{{ m.leadership_role }}</span>{% endif %}</h1>
+    <p class="sub"><span class="status-{{ m.status }}">{{ m.status }}</span>
+      {% if yp %}<span class="tag">{{ yp.grade | gradelabel }}</span>
+        {% if m.baptism_date %}<span class="tag green">Baptized</span>{% endif %}
+        {% if yp.allergies %}<span class="tag amber">Allergy</span>{% endif %}
+        {% if yp.photo_consent == 'no' %}<span class="tag amber">No photos</span>{% endif %}
+        {% if yp.graduated %}<span class="tag">Graduated</span>{% elif yp.archived %}<span class="tag">Archived</span>{% endif %}
+      {% endif %}
+      {% if m.is_member %}<span class="tag amber">Member</span>{% endif %}
+      {% for r in my_roles %}<span class="tag">{{ r.name }}</span>{% endfor %}</p>
+  </div>
+  {% if yp and 'youth' in perms %}
+  <a class="btn quiet no-print" href="{{ url_for('youth_edit', mid=m.id) }}">Edit youth profile</a>
+  {% endif %}
+  {% if 'members.edit' in perms %}
+  <a class="btn quiet no-print" href="{{ url_for('member_edit', mid=m.id) }}">Edit</a>
+  {% endif %}
+</div>
+
+<div class="row">
+  <div>
+    <h2>Record</h2>
+    <div class="card ledger">
+      <dl>
+        <dt>Birthdate</dt><dd>{{ m.birthdate | nicedate }}</dd>
+        <dt>Membership date</dt><dd>{{ m.membership_date | nicedate }}</dd>
+        <dt>Baptism date</dt><dd>{{ m.baptism_date | nicedate }}</dd>
+        <dt>Anniversary</dt><dd>{{ m.anniversary | nicedate }}</dd>
+        <dt>Phone</dt><dd>{{ m.phone or '—' }}</dd>
+        <dt>Email</dt><dd>{{ m.email or '—' }}</dd>
+        <dt>Address</dt><dd>{{ m.address or '—' }}</dd>
+      </dl>
+    </div>
+
+    {% if 'members.edit' in perms %}
+    <form method="post" action="{{ url_for('member_membership', mid=m.id) }}" class="no-print">{{ csrf() }}
+      <button class="small {{ 'quiet btn' if m.is_member }}">
+        {{ 'Remove membership' if m.is_member else 'Mark as member' }}</button>
+    </form>
+    {% endif %}
+
+    {% if yp %}
+    <h2>Youth</h2>
+    <div class="card ledger">
+      <dl>
+        {% for g in gdns %}
+        <dt>{{ g.relation or 'Guardian' }}</dt>
+        <dd>{{ g.name }}{% if g.phone %} · <a href="tel:{{ g.phone }}">{{ g.phone }}</a>{% endif %}</dd>
+        {% else %}
+        <dt>Guardians</dt><dd class="muted">None on file yet.</dd>
+        {% endfor %}
+        {% if yp.emergency_name or yp.emergency_phone %}
+        <dt>Emergency contact</dt>
+        <dd>{{ yp.emergency_name or '—' }}{% if yp.emergency_phone %} · <a href="tel:{{ yp.emergency_phone }}">{{ yp.emergency_phone }}</a>{% endif %}</dd>
+        {% endif %}
+        <dt>Allergies</dt><dd>{{ yp.allergies or '—' }}</dd>
+        <dt>Medical / needs</dt><dd>{{ yp.medical or '—' }}</dd>
+        <dt>Photo consent</dt>
+        <dd>{% if yp.photo_consent == 'yes' %}Yes — photos OK
+            {% elif yp.photo_consent == 'no' %}No — don't post photos
+            {% else %}Not asked yet{% endif %}</dd>
+      </dl>
+    </div>
+    {% endif %}
+
+    <h2>Family</h2>
+    <div class="card">
+      {% for f in fam %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">
+        <span><span class="muted">{{ f.relation }}:</span>
+          <a href="{{ url_for('member_view', mid=f.id) }}">{{ f.first_name }} {{ f.last_name }}</a></span>
+        {% if 'members.edit' in perms %}
+        <form class="inline no-print" method="post" action="{{ url_for('relationship_delete', rid=f.rid) }}">{{ csrf() }}
+          <button class="small quiet btn" style="background:none;color:var(--red);border:none">remove</button></form>
+        {% endif %}
+      </div>
+      {% else %}<p class="muted" style="margin:0">No family links yet.</p>{% endfor %}
+      {% if 'members.edit' in perms %}
+      <form method="post" action="{{ url_for('relationship_add', mid=m.id) }}" class="no-print">{{ csrf() }}
+        <div class="row">
+          <div><label>Relation</label>
+            <select name="relation">{% for r in relations %}<option>{{ r }}</option>{% endfor %}</select></div>
+          <div style="flex:2"><label>Person</label>
+            <select name="related_id">
+              {% for o in others %}<option value="{{ o.id }}">{{ o.last_name }}, {{ o.first_name }}</option>{% endfor %}
+            </select></div>
+        </div>
+        <button class="small">Link family member</button>
+        <p class="muted" style="font-size:12px;margin:6px 0 0">"Parent" means the person you pick is this member's parent. The reverse link is added automatically.</p>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if 'members.edit' in perms %}
+    <h2>Serving roles</h2>
+    <div class="card no-print">
+      <form method="post" action="{{ url_for('member_role_set', mid=m.id) }}">{{ csrf() }}
+        <input type="hidden" name="action" value="add">
+        <div class="row">
+          <div><label>Pick a role</label>
+            <select name="role_id"><option value="">—</option>
+              {% for r in all_roles %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+            </select></div>
+          <div><label>…or type a new one</label>
+            <input type="text" name="new_role" placeholder="e.g. Security"></div>
+        </div>
+        <button class="small">Add role</button>
+      </form>
+      {% for r in my_roles %}
+      <form class="inline" method="post" action="{{ url_for('member_role_set', mid=m.id) }}">{{ csrf() }}
+        <input type="hidden" name="action" value="remove"><input type="hidden" name="role_id" value="{{ r.id }}">
+        <span class="tag">{{ r.name }} <button class="small" style="background:none;border:none;color:var(--red);padding:0;margin:0;cursor:pointer">×</button></span>
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <h2>Recent attendance</h2>
+    <div class="card">
+      {% for a in recent_att %}
+      <div style="padding:2px 0">{{ a.date | nicedate }} <span class="muted">· {{ a.name }}</span></div>
+      {% else %}<p class="muted" style="margin:0">No attendance recorded.</p>{% endfor %}
+      {% for a in recent_youth %}
+      <div style="padding:2px 0">{{ a.date | nicedate }} <span class="muted">· {{ a.name }} (youth event)</span></div>
+      {% endfor %}
+    </div>
+
+    {% if 'giving' in perms and gift_years %}
+    <h2>Giving statements</h2>
+    <div class="card no-print">
+      {% for y in gift_years %}
+      <a class="btn quiet small" href="{{ url_for('statement', mid=m.id, year=y) }}">{{ y }} statement</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if groups %}
+    <h2>Groups</h2>
+    <div class="card">
+      {% for gr in groups %}<a class="tag" href="{{ url_for('group_view', gid=gr.id) }}">{{ gr.name }}</a>{% endfor %}
+    </div>
+    {% endif %}
+
+    <h2>Notes</h2>
+    <div class="card">
+      <form method="post" action="{{ url_for('note_add', mid=m.id) }}" class="no-print">{{ csrf() }}
+        <textarea name="body" rows="3" placeholder="Add a note…"></textarea>
+        <label style="margin-top:6px">Kind</label>
+        <select name="kind">
+          {% for k, label in note_kinds.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}
+        </select>
+        {% if 'notes.leadership' in perms %}
+        <label style="margin-top:6px">Who can see this?</label>
+        <select name="visibility">
+          <option value="leaders">All leaders</option>
+          <option value="leadership">Leadership only (Admin, Minister, Elders)</option>
+        </select>
+        {% endif %}
+        <button class="small">Save note</button>
+      </form>
+      {% for n in notes %}
+      <div style="border-top:1px dotted var(--rule);padding:8px 0;margin-top:8px">
+        <div class="muted" style="font-size:12.5px">{{ n.author }} · {{ n.created_at }}
+          {% if n.kind == 'baptism' %}<span class="tag green">Baptism conversation</span>
+          {% elif n.kind == 'followup' %}<span class="tag">Follow-up</span>{% endif %}
+          {% if n.visibility=='leadership' %}<span class="tag amber">Leadership only</span>{% endif %}
+          {% if 'notes.leadership' in perms %}
+          <form class="inline" method="post" action="{{ url_for('note_delete', nid=n.id) }}">{{ csrf() }}
+            <button class="small" style="background:none;border:none;color:var(--red);padding:0;cursor:pointer">delete</button>
+          </form>{% endif %}
+        </div>
+        <div>{{ n.body }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if 'users' in perms %}
+    <div class="card no-print">
+      <form method="post" action="{{ url_for('member_delete', mid=m.id) }}"
+            onsubmit="return confirm('Delete ' + {{ (m.first_name ~ ' ' ~ m.last_name) | tojson }} + ' and all their records? This cannot be undone.')">{{ csrf() }}
+        <button class="danger small">Delete member</button>
+        <span class="muted" style="font-size:12.5px">Prefer setting status to Inactive or Moved — deleting also removes attendance, notes, and giving history.</span>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — {{ church_name }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="center-page">
+  <div class="brandmark">Congregation Manager</div>
+  <h1>{{ church_name }}</h1>
+  <p class="sub" style="text-align:center">Sign in to continue</p>
+  {% for msg in get_flashed_messages() %}<div class="flash">{{ msg }}</div>{% endfor %}
+  <div class="card">
+    <form method="post">{{ csrf() }}
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required autofocus>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+      <button>Sign in</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

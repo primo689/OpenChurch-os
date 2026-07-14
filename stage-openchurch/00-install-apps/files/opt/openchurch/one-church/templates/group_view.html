@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ grp.name }}</h1>
+<p class="sub">{{ grp.description }}</p>
+
+{% if 'groups.edit' in perms %}
+<form method="post" class="card no-print">{{ csrf() }}
+  <input type="hidden" name="action" value="add">
+  <div class="row">
+    <div style="flex:2"><label for="member_id">Add member</label>
+      <select id="member_id" name="member_id">
+        {% for o in others %}<option value="{{ o.id }}">{{ o.last_name }}, {{ o.first_name }}</option>{% endfor %}
+      </select></div>
+  </div>
+  <button class="small">Add to group</button>
+</form>
+{% endif %}
+
+<table>
+  <tr><th>Name</th><th>Phone</th><th>Email</th>{% if 'groups.edit' in perms %}<th></th>{% endif %}</tr>
+  {% for m in membs %}
+  <tr>
+    <td><a href="{{ url_for('member_view', mid=m.id) }}">{{ m.last_name }}, {{ m.first_name }}</a></td>
+    <td>{{ m.phone }}</td><td>{{ m.email }}</td>
+    {% if 'groups.edit' in perms %}
+    <td class="no-print"><form class="inline" method="post">{{ csrf() }}
+      <input type="hidden" name="action" value="remove"><input type="hidden" name="member_id" value="{{ m.id }}">
+      <button class="small" style="background:none;border:none;color:var(--red);cursor:pointer;padding:0">remove</button></form></td>
+    {% endif %}
+  </tr>
+  {% else %}<tr><td colspan="4" class="muted">Nobody in this group yet.</td></tr>{% endfor %}
+</table>
+
+{% if emails %}
+<h2>Email list</h2>
+<div class="card"><code style="font-size:13px;user-select:all">{{ emails }}</code>
+  <p class="muted" style="margin:8px 0 0;font-size:12.5px">Copy and paste into the BCC field of your email.</p></div>
+{% endif %}
+
+{% if 'groups.edit' in perms %}
+<form method="post" class="no-print" onsubmit="return confirm('Delete this group? Members themselves are not deleted.')">{{ csrf() }}
+  <input type="hidden" name="action" value="delete_group">
+  <button class="danger small">Delete group</button>
+</form>
+{% endif %}
+{% endblock %}

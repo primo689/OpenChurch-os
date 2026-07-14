@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Groups</h1>
+<p class="sub">Classes, teams, and small groups.</p>
+{% if 'groups.edit' in perms %}
+<form method="post" class="card no-print">{{ csrf() }}
+  <div class="row">
+    <div><label for="name">Group name</label><input type="text" id="name" name="name" required></div>
+    <div style="flex:2"><label for="description">Description</label><input type="text" id="description" name="description"></div>
+  </div>
+  <button>Create group</button>
+</form>
+{% endif %}
+<table>
+  <tr><th>Group</th><th>Description</th><th class="num">Members</th></tr>
+  {% for gr in rows %}
+  <tr><td><a href="{{ url_for('group_view', gid=gr.id) }}">{{ gr.name }}</a></td>
+      <td>{{ gr.description }}</td><td class="num">{{ gr.n }}</td></tr>
+  {% else %}<tr><td colspan="3" class="muted">No groups yet.</td></tr>{% endfor %}
+</table>
+{% endblock %}

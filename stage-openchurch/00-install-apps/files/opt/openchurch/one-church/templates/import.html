@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Import members</h1>
+<p class="sub">Upload a CSV. <strong>SimpleChurch exports are detected automatically</strong> —
+their dates, names, and statuses are converted, families are linked (spouses and parent/child),
+and Active Groups are recreated as groups here. For other files, use these columns:
+{{ fields | join(', ') }}, custom_roles (separated by semicolons), with dates as YYYY-MM-DD.</p>
+{% if report %}<div class="flash">{{ report }}</div>{% endif %}
+<form method="post" enctype="multipart/form-data" class="card">{{ csrf() }}
+  <label for="file">CSV file</label>
+  <input type="file" id="file" name="file" accept=".csv" required>
+  <label style="display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--ink)">
+    <input type="checkbox" name="allow_duplicates" style="width:auto">
+    Allow rows whose first and last name match an existing member (normally skipped)
+  </label>
+  <button>Import</button>
+  <span class="muted">Tip: back up first from the Admin page. Importing adds members; it never deletes.</span>
+</form>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Youth events · {{ church_name }}{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center">
+  <h1>Youth events</h1>
+  <a class="btn quiet no-print" href="{{ url_for('youth') }}">Roster</a>
+</div>
+<p class="sub">One-off gatherings, trips, and anything that needs a permission slip.
+Weekly rhythms (Sunday School, youth group) still live on the regular
+<a href="{{ url_for('attendance') }}">Attendance</a> page.</p>
+
+<div class="card no-print">
+  <form method="post">{{ csrf() }}
+    <div class="row">
+      <div style="flex:2"><label>Event name *</label>
+        <input type="text" name="name" required placeholder="e.g. Lock-in, summer camp trip"></div>
+      <div><label>Date *</label>
+        <input type="date" name="date" required value="{{ today }}"></div>
+    </div>
+    <label>Details</label>
+    <input type="text" name="detail" placeholder="Location, time, what to bring…">
+    <div class="row" style="align-items:flex-end">
+      <div><label style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <input type="checkbox" name="permission_required" style="width:18px;height:18px">
+        Needs permission slips</label></div>
+      {% if ministries %}
+      <div><label>For</label>
+        <select name="ministry_id">
+          <option value="">All ministries</option>
+          {% for mn in ministries %}<option value="{{ mn.id }}">{{ mn.name }} only</option>{% endfor %}
+        </select></div>
+      {% endif %}
+      <div><label>Repeat weekly for</label>
+        <select name="repeat_weeks">
+          <option value="0">Just this once</option>
+          {% for n in [4, 8, 12, 26, 52] %}<option value="{{ n }}">{{ n }} more weeks</option>{% endfor %}
+        </select></div>
+    </div>
+    <button class="small" style="margin-top:8px">Create event</button>
+  </form>
+</div>
+
+<h2>Events</h2>
+<div class="card">
+  {% for e in events %}
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dotted var(--rule)">
+    <div>
+      <a href="{{ url_for('youth_event_view', eid=e.id) }}">{{ e.name }}</a>
+      <span class="muted" style="font-size:12.5px">· {{ e.date | nicedate }}
+        {% if e.ministry %}· {{ e.ministry }}{% endif %}
+        {% if e.n %}· {{ e.n }} checked in{% endif %}</span>
+      {% if e.permission_required %}<span class="tag amber">Permission slips</span>{% endif %}
+    </div>
+    <a class="btn quiet small no-print" href="{{ url_for('youth_event_view', eid=e.id) }}">Check-in</a>
+  </div>
+  {% else %}
+  <p class="muted" style="margin:0">No events yet. Create one above, then take check-in inside it.</p>
+  {% endfor %}
+</div>
+{% endblock %}

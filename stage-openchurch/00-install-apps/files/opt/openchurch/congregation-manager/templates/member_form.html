@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ 'Edit ' + m.first_name + ' ' + m.last_name if m else 'Add member' }}</h1>
+<p class="sub">Dates can be left blank if unknown.</p>
+<form method="post" enctype="multipart/form-data" class="card">{{ csrf() }}
+  <div class="row">
+    <div><label for="first_name">First name</label>
+      <input type="text" id="first_name" name="first_name" value="{{ v.get('first_name','') }}" required></div>
+    <div><label for="last_name">Last name</label>
+      <input type="text" id="last_name" name="last_name" value="{{ v.get('last_name','') }}" required></div>
+    <div><label for="status">Status</label>
+      <select id="status" name="status">
+        {% for s in statuses %}<option {{ 'selected' if v.get('status')==s }}>{{ s }}</option>{% endfor %}
+      </select></div>
+    <div><label for="leadership_role">Leadership role</label>
+      <select id="leadership_role" name="leadership_role">
+        <option value="">None</option>
+        {% for r in leadership_roles %}<option {{ 'selected' if v.get('leadership_role')==r }}>{{ r }}</option>{% endfor %}
+      </select></div>
+  </div>
+  <div class="row">
+    <div><label for="birthdate">Birthdate</label>
+      <input type="date" id="birthdate" name="birthdate" value="{{ v.get('birthdate','') or '' }}"></div>
+    <div><label for="membership_date">Membership date</label>
+      <input type="date" id="membership_date" name="membership_date" value="{{ v.get('membership_date','') or '' }}"></div>
+    <div><label for="baptism_date">Baptism date</label>
+      <input type="date" id="baptism_date" name="baptism_date" value="{{ v.get('baptism_date','') or '' }}"></div>
+    <div><label for="anniversary">Wedding anniversary</label>
+      <input type="date" id="anniversary" name="anniversary" value="{{ v.get('anniversary','') or '' }}"></div>
+  </div>
+  <div class="row">
+    <div><label for="phone">Phone</label>
+      <input type="text" id="phone" name="phone" value="{{ v.get('phone','') }}"></div>
+    <div><label for="email">Email</label>
+      <input type="email" id="email" name="email" value="{{ v.get('email','') }}"></div>
+  </div>
+  <label style="display:flex;gap:8px;align-items:center;margin-top:14px;color:var(--ink)">
+    <input type="checkbox" name="is_member" style="width:auto" {{ 'checked' if v.get('is_member') in (1, '1', 'on', True) }}>
+    Member of the congregation
+  </label>
+  <label for="address">Address</label>
+  <input type="text" id="address" name="address" value="{{ v.get('address','') }}">
+  <label for="photo">Photo (.jpg, .png, or .webp)</label>
+  <input type="file" id="photo" name="photo" accept=".jpg,.jpeg,.png,.webp">
+  <button>Save member</button>
+  <a class="btn quiet" href="{{ url_for('member_view', mid=m.id) if m else url_for('members') }}">Cancel</a>
+</form>
+{% endblock %}

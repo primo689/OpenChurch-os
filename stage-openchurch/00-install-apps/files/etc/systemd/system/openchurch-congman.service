@@ -1,0 +1,28 @@
+[Unit]
+Description=Congregation Manager (Open Church OS)
+After=network.target
+
+[Service]
+User=oc-congman
+Group=oc-congman
+EnvironmentFile=/etc/openchurch/congman.env
+WorkingDirectory=/opt/openchurch/congregation-manager
+ExecStart=/usr/bin/python3 app.py
+Restart=always
+
+# Isolation: this service can write ONLY to its own state directories.
+# A compromised app cannot read or touch the other apps' databases.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/openchurch/congman /var/backups/openchurch/congman
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

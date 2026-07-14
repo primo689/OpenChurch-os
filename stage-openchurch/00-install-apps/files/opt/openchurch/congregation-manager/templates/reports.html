@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Reports</h1>
+<p class="sub">Attendance trends and follow-up lists.</p>
+
+<form method="get" class="card no-print">
+  <div class="row">
+    <div><label for="event">Event trend</label>
+      <select id="event" name="event">
+        {% for e in events %}<option value="{{ e.id }}" {{ 'selected' if e.id==eid }}>{{ e.name }}</option>{% endfor %}
+      </select></div>
+    <div><label for="weeks">"Not seen" window (weeks)</label>
+      <input type="number" id="weeks" name="weeks" min="1" max="52" value="{{ weeks }}"></div>
+  </div>
+  <button>Update</button>
+</form>
+
+<h2>Attendance trend — last {{ trend|length }} dates</h2>
+{% if trend %}
+<div class="card">
+  <div class="bars">
+    {% for t in trend %}
+    <div class="bar" style="height: {{ (t.c / peak * 100) | round }}%"><span>{{ t.c }}</span></div>
+    {% endfor %}
+  </div>
+  <div class="barlabels">
+    {% for t in trend %}<div>{{ t.date[5:] }}</div>{% endfor %}
+  </div>
+</div>
+{% else %}<p class="muted">No attendance recorded for this event yet.</p>{% endif %}
+
+<h2>Active members not seen in {{ weeks }} week{{ 's' if weeks != 1 }}</h2>
+{% if lapsed %}
+<table>
+  <tr><th>Member</th><th>Last attended</th><th>Phone</th><th>Email</th></tr>
+  {% for m in lapsed %}<tr>
+    <td><a href="{{ url_for('member_view', mid=m.id) }}">{{ m.first_name }} {{ m.last_name }}</a></td>
+    <td>{{ m.last_seen | nicedate if m.last_seen else 'No record' }}</td>
+    <td>{{ m.phone }}</td><td>{{ m.email }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="muted">Nobody is overdue for a check-in. Good sign.</p>{% endif %}
+{% endblock %}

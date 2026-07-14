@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Attendance</h1>
+<p class="sub">Pick the event and date, check who's here, save.</p>
+
+<form method="get" class="card no-print">
+  <div class="row">
+    <div><label for="event">Event</label>
+      <select id="event" name="event">
+        <option value="">Choose…</option>
+        {% for e in events %}<option value="{{ e.id }}" {{ 'selected' if e.id==eid }}>{{ e.name }}</option>{% endfor %}
+      </select></div>
+    <div><label for="date">Date</label>
+      <input type="date" id="date" name="date" value="{{ day }}"></div>
+  </div>
+  <button>Open roster</button>
+</form>
+
+{% if eid %}
+<form method="post" action="{{ url_for('attendance', event=eid, date=day) }}">{{ csrf() }}
+  <div class="roster">
+    {% for m in roster %}
+    <label><input type="checkbox" name="present" value="{{ m.id }}" {{ 'checked' if m.id in present }}>
+      {{ m.last_name }}, {{ m.first_name }}
+      {% if m.status=='Visitor' %}<span class="tag amber">V</span>{% endif %}</label>
+    {% endfor %}
+  </div>
+  {% if guard %}
+  <label style="display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--red)">
+    <input type="checkbox" name="confirm_clear" style="width:auto">
+    Yes, clear every saved record for this event and date.
+  </label>
+  {% endif %}
+  <button>Save attendance</button>
+  {% if present %}
+  <a class="btn quiet" href="{{ url_for('attendance_sheet', event=eid, date=day) }}">Print attendance sheet</a>
+  {% endif %}
+  <span class="muted">Saving replaces the record for this event and date.</span>
+</form>
+
+<h2>Walk-in visitor?</h2>
+<form method="post" action="{{ url_for('attendance_visitor', event=eid, date=day) }}" class="card no-print">{{ csrf() }}
+  <div class="row">
+    <div><label for="vfirst">First name</label><input type="text" id="vfirst" name="first_name"></div>
+    <div><label for="vlast">Last name</label><input type="text" id="vlast" name="last_name"></div>
+  </div>
+  <button class="small">Add visitor and mark present</button>
+  <span class="muted">Creates them as a Visitor; you can fill in details later.</span>
+</form>
+{% endif %}
+{% endblock %}

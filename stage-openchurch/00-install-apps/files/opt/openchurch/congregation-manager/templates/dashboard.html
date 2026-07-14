@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dashboard</h1>
+<p class="sub">{{ today | nicedate }}</p>
+
+<div class="cards">
+  <div class="card stat"><div class="n">{{ n_members }}</div><div class="l">Members</div></div>
+  <div class="card stat"><div class="n">{{ active }}</div><div class="l">Active people</div></div>
+  <div class="card stat"><div class="n">{{ visitors }}</div><div class="l">Visitors</div></div>
+  {% for r in recent %}
+  <div class="card stat"><div class="n">{{ r.c }}</div><div class="l">{{ r.name }} · {{ r.date | nicedate }}</div></div>
+  {% endfor %}
+</div>
+
+<div class="row">
+  <div>
+    <h2>Birthdays — next two weeks</h2>
+    {% if bdays %}
+    <table>{% for m in bdays %}<tr>
+      <td><a href="{{ url_for('member_view', mid=m.id) }}">{{ m.first_name }} {{ m.last_name }}</a></td>
+      <td class="right">{{ m.birthdate[5:] }}</td></tr>{% endfor %}</table>
+    {% else %}<p class="muted">None coming up.</p>{% endif %}
+  </div>
+  <div>
+    <h2>Anniversaries — next two weeks</h2>
+    {% if annv %}
+    <table>{% for m in annv %}<tr>
+      <td><a href="{{ url_for('member_view', mid=m.id) }}">{{ m.first_name }} {{ m.last_name }}</a></td>
+      <td class="right">{{ m.anniversary[5:] }}</td></tr>{% endfor %}</table>
+    {% else %}<p class="muted">None coming up.</p>{% endif %}
+  </div>
+</div>
+
+<h2>Not seen in four weeks</h2>
+{% if lapsed %}
+<table>
+  <tr><th>Member</th><th>Last attended</th></tr>
+  {% for m in lapsed %}<tr>
+    <td><a href="{{ url_for('member_view', mid=m.id) }}">{{ m.first_name }} {{ m.last_name }}</a></td>
+    <td>{{ m.last_seen | nicedate if m.last_seen else 'No record' }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="muted">Everyone active has been seen recently.</p>{% endif %}
+{% endblock %}

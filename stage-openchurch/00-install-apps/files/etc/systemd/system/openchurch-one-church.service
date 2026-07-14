@@ -1,0 +1,28 @@
+[Unit]
+Description=One Church (Open Church OS)
+After=network.target
+
+[Service]
+User=oc-onechurch
+Group=oc-onechurch
+EnvironmentFile=/etc/openchurch/one-church.env
+WorkingDirectory=/opt/openchurch/one-church
+ExecStart=/usr/bin/python3 app.py
+Restart=always
+
+# Isolation: this service can write ONLY to its own state directories.
+# A compromised app cannot read or touch the other apps' databases.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/openchurch/one-church /var/backups/openchurch/one-church
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

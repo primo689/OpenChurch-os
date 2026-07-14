@@ -1,0 +1,28 @@
+[Unit]
+Description=Church Youth Manager (Open Church OS)
+After=network.target
+
+[Service]
+User=oc-cym
+Group=oc-cym
+EnvironmentFile=/etc/openchurch/cym.env
+WorkingDirectory=/opt/openchurch/church-youth-manager
+ExecStart=/usr/bin/python3 server.py
+Restart=always
+
+# Isolation: this service can write ONLY to its own state directories.
+# A compromised app cannot read or touch the other apps' databases.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/openchurch/cym
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

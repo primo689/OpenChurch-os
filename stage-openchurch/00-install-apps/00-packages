@@ -1,0 +1,7 @@
+avahi-daemon
+python3-flask
+python3-waitress
+nginx-light
+ssl-cert
+curl
+ca-certificates

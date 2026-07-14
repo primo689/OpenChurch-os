@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Audit log</h1>
+<p class="sub">Last 500 actions, newest first.</p>
+<table>
+  <tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr>
+  {% for r in rows %}
+  <tr><td>{{ r.ts }}</td><td>{{ r.username }}</td><td>{{ r.action }}</td><td>{{ r.detail }}</td></tr>
+  {% else %}<tr><td colspan="4" class="muted">Nothing logged yet.</td></tr>{% endfor %}
+</table>
+{% endblock %}

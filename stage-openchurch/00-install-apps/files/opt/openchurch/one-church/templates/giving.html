@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Giving</h1>
+<p class="sub">{{ year }} total: <strong>{{ total | money }}</strong> ({{ count }} gift{{ 's' if count != 1 }})
+  {% for y in years %}{% if y != year %}· <a href="{{ url_for('giving', year=y) }}">{{ y }}</a>{% endif %}{% endfor %}</p>
+
+<form method="post" class="card no-print">{{ csrf() }}
+  <h2 style="margin-top:0">Record a gift</h2>
+  <div class="row">
+    <div style="flex:2"><label for="member_id">Giver</label>
+      <select id="member_id" name="member_id" required>
+        <option value="">Choose…</option>
+        {% for m in members_all %}<option value="{{ m.id }}">{{ m.last_name }}, {{ m.first_name }}</option>{% endfor %}
+      </select></div>
+    <div><label for="fund_id">Fund</label>
+      <select id="fund_id" name="fund_id">
+        {% for f in funds %}<option value="{{ f.id }}">{{ f.name }}</option>{% endfor %}
+      </select></div>
+    <div><label for="amount">Amount ($)</label>
+      <input type="number" id="amount" name="amount" step="0.01" min="0.01" required></div>
+    <div><label for="date">Date</label>
+      <input type="date" id="date" name="date" value="{{ today }}"></div>
+  </div>
+  <div class="row">
+    <div><label for="method">Method</label>
+      <select id="method" name="method"><option>Check</option><option>Cash</option><option>Online</option><option>Other</option></select></div>
+    <div style="flex:2"><label for="note">Note (check #, etc.)</label>
+      <input type="text" id="note" name="note"></div>
+  </div>
+  <button>Record gift</button>
+</form>
+
+<form method="get" class="no-print" style="margin-bottom:10px">
+  <input type="hidden" name="year" value="{{ year }}">
+  <select name="giver" style="width:auto;display:inline-block">
+    <option value="">All givers</option>
+    {% for m in members_all %}<option value="{{ m.id }}" {{ 'selected' if m.id==giver }}>{{ m.last_name }}, {{ m.first_name }}</option>{% endfor %}
+  </select>
+  <button class="small">Filter</button>
+  {% if count > 300 %}<span class="muted">Showing the 300 most recent of {{ count }} — filter by giver or open their statement to see everything.</span>{% endif %}
+</form>
+<table>
+  <tr><th>Date</th><th>Giver</th><th>Fund</th><th class="num">Amount</th><th>Method</th><th>Note</th><th></th></tr>
+  {% for g in rows %}
+  <tr>
+    <td>{{ g.date | nicedate }}</td>
+    <td><a href="{{ url_for('member_view', mid=g.member_id) }}">{{ g.last_name }}, {{ g.first_name }}</a></td>
+    <td>{{ g.fund }}</td><td class="num">{{ g.amount_cents | money }}</td>
+    <td>{{ g.method }}</td><td>{{ g.note }}</td>
+    <td class="no-print"><form class="inline" method="post" action="{{ url_for('gift_delete', gid=g.id) }}"
+      onsubmit="return confirm('Delete this gift?')">{{ csrf() }}
+      <button class="small" style="background:none;border:none;color:var(--red);cursor:pointer;padding:0">delete</button></form></td>
+  </tr>
+  {% else %}<tr><td colspan="7" class="muted">No gifts recorded for {{ year }}.</td></tr>{% endfor %}
+</table>
+{% endblock %}

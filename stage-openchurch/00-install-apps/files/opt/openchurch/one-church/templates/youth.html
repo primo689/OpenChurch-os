@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Students · {{ church_name }}{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+  <h1>Students</h1>
+  <div class="no-print">
+    <a class="btn" href="{{ url_for('youth_new') }}">Add student</a>
+    <a class="btn quiet" href="{{ url_for('youth_events') }}">Events &amp; check-in</a>
+    <a class="btn quiet" href="{{ url_for('export_youth') }}">Export CSV</a>
+    <a class="btn quiet" href="{{ url_for('export_youth', care=1) }}"
+       title="Includes allergies, medical needs, and emergency contacts. Handle like the sensitive document it is.">Export with care details</a>
+  </div>
+</div>
+
+{% if ministries %}
+<div class="minitabs no-print">
+  <a href="{{ url_for('youth') }}" class="{{ 'on' if not ministry }}">Everyone</a>
+  {% for mn in ministries %}
+  <a href="{{ url_for('youth', ministry=mn.id) }}" class="{{ 'on' if ministry and ministry.id == mn.id }}">{{ mn.name }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<form method="get" class="no-print" style="margin-bottom:14px">
+  {% if ministry %}<input type="hidden" name="ministry" value="{{ ministry.id }}">{% endif %}
+  <div class="row">
+    <div style="flex:2"><input type="text" name="q" value="{{ q }}" placeholder="Search students or guardians…"></div>
+    <div><button class="small">Search</button>
+      <a class="btn quiet small" href="{{ url_for('youth', archived='0' if show_archived else '1', ministry=ministry.id if ministry else None) }}">
+        {{ 'Hide' if show_archived else 'Show' }} archived ({{ archived_count }})</a></div>
+  </div>
+</form>
+
+{% for grade, students in by_grade %}
+<h2>{{ grade | gradelabel }}</h2>
+<div class="card">
+  {% for s in students %}
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dotted var(--rule)">
+    <div>
+      <a href="{{ url_for('member_view', mid=s.id) }}">{{ s.first_name }} {{ s.last_name }}</a>
+      <span class="muted" style="font-size:12.5px">
+        {% if s.status == 'Visitor' %} · visitor{% endif %}
+      </span>
+      {% if s.baptism_date %}<span class="tag green">Baptized</span>
+      {% elif s.id in convo_ids %}<span class="tag">Baptism convos</span>{% endif %}
+      {% if s.allergies %}<span class="tag amber">Allergy</span>{% endif %}
+      {% if s.photo_consent == 'no' %}<span class="tag amber">No photos</span>{% endif %}
+      {% if s.graduated %}<span class="tag">Graduated</span>{% elif s.archived %}<span class="tag">Archived</span>{% endif %}
+    </div>
+    <div class="no-print" style="white-space:nowrap">
+      <a class="btn quiet small" href="{{ url_for('youth_edit', mid=s.id) }}">Edit</a>
+      <form class="inline" method="post" action="{{ url_for('youth_archive', mid=s.id) }}">{{ csrf() }}
+        <button class="small quiet btn">{{ 'Restore' if s.archived else 'Archive' }}</button></form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><p class="muted" style="margin:0">
+  {% if q %}No students match that search.{% else %}No students yet. Add your first one above.{% endif %}
+</p></div>
+{% endfor %}
+
+<div class="no-print">
+  <h2>Tools</h2>
+  <div class="card">
+    <details style="margin-bottom:10px">
+      <summary style="cursor:pointer">Guardian text list ({{ phones | length }} numbers{% if ministry %}, {{ ministry.name }} only{% endif %})</summary>
+      <p class="muted" style="font-size:12.5px">Every unique guardian phone number for active students
+        {% if ministry %}in {{ ministry.name }}{% endif %}. Copy and paste into a group text.
+        Pick a ministry tab above first to text just that group.</p>
+      <textarea rows="3" readonly onclick="this.select()">{{ phones | join(', ') }}</textarea>
+    </details>
+
+    <details style="margin-bottom:10px" {{ 'open' if request.args.get('again') }}>
+      <summary style="cursor:pointer">Promotion Sunday</summary>
+      <p class="muted" style="font-size:12.5px">Moves {{ moving }} student{{ '' if moving == 1 else 's' }} up a grade
+        {% if seniors %}and graduates {{ seniors }} senior{{ '' if seniors == 1 else 's' }} (archived, history kept){% endif %}.
+        Do this once a year when the school year turns over. A backup is taken automatically first.</p>
+      {% if promoted_this_year %}
+      <p style="font-size:12.5px;color:var(--amber)"><strong>Heads up:</strong> Promotion Sunday already ran this
+        school year. Running it again would move everyone up two grades.</p>
+      {% endif %}
+      <form method="post" action="{{ url_for('youth_promote') }}"
+            onsubmit="return confirm('Promotion Sunday: move everyone up a grade{% if seniors %} and graduate {{ seniors }} senior{{ '' if seniors == 1 else 's' }}{% endif %}?')">{{ csrf() }}
+        {% if promoted_this_year %}
+        <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin-bottom:6px">
+          <input type="checkbox" name="confirm_again" style="width:auto">
+          I understand it already ran this year and I really mean to run it again.
+        </label>
+        {% endif %}
+        <button class="small">Run Promotion Sunday</button>
+      </form>
+    </details>
+
+    <details style="margin-bottom:10px">
+      <summary style="cursor:pointer">Ministries ({{ ministries | length }})</summary>
+      <p class="muted" style="font-size:12.5px">Split the roster by grade range, like Kids (K–5) and
+        Youth (6–12). Each ministry gets its own tab, text list, and check-in rosters.
+        Students without a grade show in every tab until they're sorted.</p>
+      {% for mn in ministries %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">
+        <span>{{ mn.name }} <span class="muted" style="font-size:12px">{{ mn.grade_from | gradelabel }}–{{ mn.grade_to | gradelabel }}</span></span>
+        <form class="inline" method="post" action="{{ url_for('youth_ministries') }}"
+              onsubmit="return confirm('Remove ' + {{ mn.name | tojson }} + '? Students and events are kept.')">{{ csrf() }}
+          <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ mn.id }}">
+          <button class="small quiet btn">Remove</button>
+        </form>
+      </div>
+      {% endfor %}
+      <form method="post" action="{{ url_for('youth_ministries') }}" style="margin-top:8px">{{ csrf() }}
+        <input type="hidden" name="action" value="add">
+        <div class="row">
+          <div style="flex:2"><input type="text" name="name" placeholder="Ministry name (e.g. Kids)"></div>
+          <div><select name="grade_from">{% for g in ['K','1','2','3','4','5','6','7','8','9','10','11','12'] %}<option value="{{ g }}">from {{ g | gradelabel }}</option>{% endfor %}</select></div>
+          <div><select name="grade_to">{% for g in ['K','1','2','3','4','5','6','7','8','9','10','11','12'] %}<option value="{{ g }}" {{ 'selected' if g == '12' }}>to {{ g | gradelabel }}</option>{% endfor %}</select></div>
+          <div><button class="small">Add</button></div>
+        </div>
+      </form>
+    </details>
+
+    <details>
+      <summary style="cursor:pointer">Add a youth profile to an existing member</summary>
+      <p class="muted" style="font-size:12.5px">For kids who are already in the member list — this keeps one record per person instead of two.</p>
+      <form method="post" action="{{ url_for('youth') }}">{{ csrf() }}
+        <input type="hidden" name="action" value="attach">
+        <div class="row">
+          <div style="flex:2"><select name="member_id">
+            {% for o in unattached %}<option value="{{ o.id }}">{{ o.last_name }}, {{ o.first_name }}</option>{% endfor %}
+          </select></div>
+          <div><button class="small">Add youth profile</button></div>
+        </div>
+      </form>
+    </details>
+  </div>
+</div>
+{% endblock %}

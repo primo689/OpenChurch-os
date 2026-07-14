@@ -1,0 +1,12 @@
+# NEVER commit these — they contain your church's real data
+data.db
+data.db-wal
+data.db-shm
+backups/
+.secret
+
+# misc
+nohup.out
+__pycache__/
+*.pyc
+.DS_Store

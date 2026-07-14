@@ -1,0 +1,189 @@
+#!/bin/bash -e
+# openchurch — Open Church OS administration.
+#
+#   sudo openchurch status          what's selected and running
+#   sudo openchurch switch <app>    change which app this Pi runs
+#   sudo openchurch chooser-reset   wipe the selection, re-arm first-boot page
+#   sudo openchurch remote on       enable remote access over Tailscale
+#   sudo openchurch remote off      disable remote access
+#   sudo openchurch remote status   is remote access on?
+#
+# Apps: one-church | congman | cym
+
+SELECTED_FILE=/etc/openchurch/selected
+TEMPLATE=/etc/openchurch/nginx-site.template
+SITE=/etc/nginx/sites-available/openchurch
+
+port_for() {
+    case "$1" in
+        one-church) echo 8080 ;;
+        congman)    echo 8081 ;;
+        cym)        echo 8082 ;;
+        *) return 1 ;;
+    esac
+}
+
+title_for() {
+    case "$1" in
+        one-church) echo "One Church" ;;
+        congman)    echo "Congregation Manager" ;;
+        cym)        echo "Church Youth Manager" ;;
+    esac
+}
+
+need_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "Run with sudo."
+        exit 1
+    fi
+}
+
+case "${1:-}" in
+
+status)
+    if [ -f "$SELECTED_FILE" ]; then
+        sel=$(cat "$SELECTED_FILE")
+        echo "Selected app: $(title_for "$sel") ($sel)"
+        systemctl is-active --quiet "openchurch-$sel" \
+            && echo "Service:      running" || echo "Service:      NOT running"
+        systemctl is-active --quiet nginx \
+            && echo "Web front:    nginx on ports 80/443" || echo "Web front:    nginx NOT running"
+    else
+        echo "No app selected yet. The first-boot chooser is on port 80."
+    fi
+    if systemctl is-active --quiet tailscaled; then
+        echo "Remote:       Tailscale ON ($(tailscale ip -4 2>/dev/null | head -1 || echo 'authenticating'))"
+    else
+        echo "Remote:       off (LAN only)"
+    fi
+    ;;
+
+remote)
+    case "${2:-}" in
+    on)
+        need_root
+        cat <<'RWARN'
+
+  Turning on remote access changes one important sentence.
+
+  With Tailscale OFF, records are reachable only from this building's
+  network. With it ON, records are reachable by exactly the devices
+  invited to your Tailscale network (your "tailnet") - encrypted,
+  invite-only, no ports opened to the internet. That is still very
+  good, but it is a different promise. Make sure whoever answers for
+  this device (elders, trustees) knows which one you are making.
+
+RWARN
+        printf "Type ON to continue: "
+        read -r answer
+        if [ "$answer" != "ON" ]; then
+            echo "Not confirmed. Nothing changed."
+            exit 1
+        fi
+        systemctl enable --now tailscaled
+        echo
+        echo "Next: a QR code and a login link. Scan the QR code with your"
+        echo "phone's camera (or open the link on any device) and sign in."
+        echo "Use an account that belongs to the CHURCH, ideally, not a"
+        echo "personal one that leaves when a person does."
+        echo
+        # --qr prints the login link as a scannable code; fall back to the
+        # plain link on tailscale builds that don't support it.
+        tailscale up --qr || tailscale up
+        echo
+        echo "Done. From any device on the tailnet, the app is at:"
+        echo "  https://$(hostname).local/  (on the LAN)"
+        echo "  https://$(tailscale ip -4 | head -1)/  (over Tailscale)"
+        echo "Manage which devices can reach it at https://login.tailscale.com"
+        ;;
+    off)
+        need_root
+        tailscale down 2>/dev/null || true
+        systemctl disable --now tailscaled
+        echo "Remote access is off. The app is reachable from this network only."
+        ;;
+    status)
+        if systemctl is-active --quiet tailscaled; then
+            tailscale status
+        else
+            echo "Remote access is off (LAN only). Turn on: sudo openchurch remote on"
+        fi
+        ;;
+    *)
+        echo "Usage: sudo openchurch remote <on|off|status>"
+        exit 1
+        ;;
+    esac
+    ;;
+
+switch)
+    need_root
+    new="${2:-}"
+    if ! port_for "$new" >/dev/null 2>&1; then
+        echo "Usage: sudo openchurch switch <one-church|congman|cym>"
+        exit 1
+    fi
+    old=$(cat "$SELECTED_FILE" 2>/dev/null || echo "")
+    if [ "$old" = "$new" ]; then
+        echo "$(title_for "$new") is already the selected app."
+        exit 0
+    fi
+
+    cat <<WARN
+
+  READ THIS BEFORE CONTINUING
+
+  Switching changes which app runs. It does NOT move any data.
+  $(title_for "$new") will start with ITS OWN records — whatever was in it
+  before, or empty if it has never run here. Nothing from
+  ${old:-the current app} is copied, converted, or deleted; its data stays
+  untouched at /var/lib/openchurch/${old:-<app>} in case you switch back.
+
+  Moving records between apps is a migration, which is a separate,
+  deliberate process with a backup, a preview, and a way back. The one
+  supported migration is Church Youth Manager INTO One Church — see
+  "Migration" in the README before doing it.
+
+WARN
+    printf "Type the name of the app to switch to (%s) to confirm: " "$new"
+    read -r answer
+    if [ "$answer" != "$new" ]; then
+        echo "Not confirmed. Nothing changed."
+        exit 1
+    fi
+
+    if [ -n "$old" ]; then
+        systemctl disable --now "openchurch-$old" || true
+    fi
+    echo "$new" > "$SELECTED_FILE"
+    chmod 644 "$SELECTED_FILE"
+    sed "s/__PORT__/$(port_for "$new")/" "$TEMPLATE" > "$SITE"
+    systemctl enable --now "openchurch-$new"
+    nginx -t && systemctl reload nginx
+    echo "Done. $(title_for "$new") is now serving at https://$(hostname).local/"
+    ;;
+
+chooser-reset)
+    need_root
+    echo "This wipes the app selection and puts the first-boot chooser back on"
+    echo "port 80, where ANYONE on the network can pick an app. App data is"
+    echo "not touched. Meant for re-provisioning a device, not everyday use."
+    printf "Type RESET to confirm: "
+    read -r answer
+    if [ "$answer" != "RESET" ]; then
+        echo "Not confirmed. Nothing changed."
+        exit 1
+    fi
+    for a in one-church congman cym; do
+        systemctl disable --now "openchurch-$a" 2>/dev/null || true
+    done
+    systemctl disable --now nginx 2>/dev/null || true
+    rm -f "$SELECTED_FILE"
+    systemctl enable --now openchurch-chooser
+    echo "Chooser re-armed on port 80."
+    ;;
+
+*)
+    grep '^#' "$0" | sed 's/^# \{0,1\}//' | head -8
+    ;;
+esac

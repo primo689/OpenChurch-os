@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attendance — {{ ev.name }} — {{ day }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main style="max-width:720px;margin:30px auto;padding:0 20px">
+  <p class="no-print"><a href="{{ url_for('attendance', event=ev.id, date=day) }}">&larr; Back to attendance</a>
+    · <button class="small" onclick="window.print()">Print</button></p>
+  <h1 style="font-family:var(--serif)">{{ church_name }}</h1>
+  <p class="muted">{{ city }}</p>
+  <h2 style="border:none">Attendance Record — {{ ev.name }}</h2>
+  <p><strong>{{ day | nicedate }}</strong> · {{ rows | length }} present</p>
+
+  <table>
+    <tr><th style="width:40px">#</th><th>Name</th><th>Status</th></tr>
+    {% for m in rows %}
+    <tr><td>{{ loop.index }}</td><td>{{ m.last_name }}, {{ m.first_name }}</td><td>{{ m.status }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <p class="muted" style="margin-top:36px">
+    Recorded in One Church by {{ printed_by }} · printed {{ printed_at }}</p>
+  <p style="margin-top:36px">Reviewed by: ______________________________ &nbsp;&nbsp; Date: ______________</p>
+</main>
+</body>
+</html>

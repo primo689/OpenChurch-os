@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Admin</h1>
+<p class="sub">Settings, logins, events, funds, roles, backups, and data.</p>
+
+<h2>Church details</h2>
+<form method="post" class="card">{{ csrf() }}
+  <input type="hidden" name="action" value="church">
+  <div class="row">
+    <div><label for="church_name">Church name</label>
+      <input type="text" id="church_name" name="church_name" value="{{ church_name }}"></div>
+    <div><label for="city">City and state</label>
+      <input type="text" id="city" name="city" value="{{ city }}"></div>
+  </div>
+  <button class="small">Save</button>
+</form>
+
+<h2>Who can see giving</h2>
+<form method="post" class="card">{{ csrf() }}
+  <input type="hidden" name="action" value="giving_roles">
+  <p class="muted" style="margin-top:0">Individual giving is sensitive. Many churches limit it to one
+  or two people so pastoral relationships stay separate from money. Decide this with your leadership,
+  not by default. Admin always has access.</p>
+  {% for r in leadership_roles %}{% if r != 'Admin' %}
+  <label style="display:inline-flex;gap:6px;align-items:center;margin-right:16px;color:var(--ink)">
+    <input type="checkbox" name="g_{{ r }}" style="width:auto" {{ 'checked' if r in giving_roles }}> {{ r }}
+  </label>
+  {% endif %}{% endfor %}
+  <br><button class="small">Save giving access</button>
+</form>
+
+{% if 'users' in perms %}
+<h2>Logins</h2>
+<div class="card">
+  {% for u in users %}
+  <div style="border-top:1px solid var(--rule);padding:10px 0">
+    <form method="post" class="inline">{{ csrf() }}
+      <input type="hidden" name="action" value="user_edit">
+      <input type="hidden" name="id" value="{{ u.id }}">
+      <input type="text" name="display_name" value="{{ u.display_name }}" style="width:160px;display:inline-block">
+      <input type="text" name="username" value="{{ u.username }}" style="width:130px;display:inline-block">
+      <select name="role" style="width:150px;display:inline-block" {{ 'disabled' if u.id == session['user_id'] }}>
+        {% for r in login_roles %}<option {{ 'selected' if u.role==r }}>{{ r }}</option>{% endfor %}
+      </select>
+      {% if u.id == session['user_id'] %}<input type="hidden" name="role" value="{{ u.role }}">{% endif %}
+      <button class="small">Save</button>
+      {% if not u.active %}<span class="tag">Disabled</span>{% endif %}
+    </form>
+    <form method="post" class="inline">{{ csrf() }}
+      <input type="hidden" name="action" value="user_password">
+      <input type="hidden" name="id" value="{{ u.id }}">
+      <input type="password" name="password" placeholder="New password" style="width:140px;display:inline-block">
+      <button class="small quiet btn">Reset</button>
+    </form>
+    {% if u.id != session['user_id'] %}
+    <form method="post" class="inline">{{ csrf() }}
+      <input type="hidden" name="action" value="user_toggle">
+      <input type="hidden" name="id" value="{{ u.id }}">
+      <button class="small quiet btn">{{ 'Disable' if u.active else 'Enable' }}</button>
+    </form>
+    <form method="post" class="inline" onsubmit="return confirm('Delete the login for {{ u.display_name }}? They will no longer be able to sign in. Their member record (if any) is not affected.')">{{ csrf() }}
+      <input type="hidden" name="action" value="user_delete">
+      <input type="hidden" name="id" value="{{ u.id }}">
+      <button class="small danger">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+  <h2>Add a login</h2>
+  <form method="post">{{ csrf() }}
+    <input type="hidden" name="action" value="user_add">
+    <div class="row">
+      <div><label>Name</label><input type="text" name="display_name"></div>
+      <div><label>Username</label><input type="text" name="username"></div>
+      <div><label>Role</label><select name="role">
+        {% for r in login_roles %}<option>{{ r }}</option>{% endfor %}</select></div>
+      <div><label>Password (8+)</label><input type="password" name="password"></div>
+    </div>
+    <button class="small">Create login</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="row">
+  <div>
+    <h2>Event types</h2>
+    <div class="card">
+      {% for e in events %}
+      <form class="inline" method="post" style="display:flex;justify-content:space-between;padding:3px 0">{{ csrf() }}
+        <span class="{{ 'muted' if not e.active }}">{{ e.name }}</span>
+        <input type="hidden" name="action" value="event_toggle"><input type="hidden" name="id" value="{{ e.id }}">
+        <button class="small quiet btn">{{ 'Retire' if e.active else 'Restore' }}</button>
+      </form>
+      {% endfor %}
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="event_add">
+        <input type="text" name="name" placeholder="New event type"><button class="small">Add</button></form>
+    </div>
+  </div>
+  <div>
+    <h2>Giving funds</h2>
+    <div class="card">
+      {% for f in funds %}<div style="padding:3px 0">{{ f.name }}</div>{% endfor %}
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="fund_add">
+        <input type="text" name="name" placeholder="New fund"><button class="small">Add</button></form>
+    </div>
+  </div>
+  <div>
+    <h2>Serving roles</h2>
+    <div class="card">
+      {% for r in roles %}
+      <form class="inline" method="post" style="display:flex;justify-content:space-between;padding:3px 0">{{ csrf() }}
+        <span>{{ r.name }} <span class="muted">({{ r.n }})</span></span>
+        <input type="hidden" name="action" value="role_delete"><input type="hidden" name="id" value="{{ r.id }}">
+        <button class="small quiet btn" onclick="return confirm('Remove this role from all members?')">Delete</button>
+      </form>
+      {% endfor %}
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="role_add">
+        <input type="text" name="name" placeholder="New serving role"><button class="small">Add</button></form>
+    </div>
+  </div>
+</div>
+
+<h2>Backups</h2>
+<div class="card">
+  <form method="post">{{ csrf() }}<input type="hidden" name="action" value="backup">
+    <button class="small">Back up now</button>
+    <span class="muted">Copies the database into the <code>backups</code> folder. Backups contain everything — including minors' details, notes, and giving — so any USB drive they're copied to belongs in a locked drawer. See the README to schedule nightly backups.</span>
+  </form>
+  {% if backups %}<p class="muted" style="margin-bottom:0">Recent: {{ backups | join(' · ') }}</p>{% endif %}
+</div>
+
+<h2>Data</h2>
+<div class="card">
+  <a class="btn quiet small" href="{{ url_for('export_members') }}">Export members (CSV)</a>
+  <a class="btn quiet small" href="{{ url_for('import_members') }}">Import members (CSV)</a>
+</div>
+{% endblock %}

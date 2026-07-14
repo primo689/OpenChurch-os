@@ -1,0 +1,43 @@
+name: Build Open Church OS image
+
+on:
+  workflow_dispatch:        # "Run workflow" button in the Actions tab
+  push:
+    tags: ["v*"]            # tagging v1.0.0 builds and attaches a release image
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # needed to attach the image to a release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image with pi-gen
+        uses: usimd/pi-gen-action@v1
+        id: build
+        with:
+          image-name: openchurch-os
+          # Lite base (no desktop), then our stage on top.
+          stage-list: stage0 stage1 stage2 ./stage-openchurch
+          release: bookworm
+          hostname: openchurch
+          # Keep Raspberry Pi Imager's own customization (user, wifi, ssh)
+          # working; we don't bake in any credentials.
+          enable-ssh: 0
+          compression: xz
+          verbose-output: true
+
+      - name: Upload image as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openchurch-os-image
+          path: ${{ steps.build.outputs.image-path }}
+          retention-days: 14
+
+      - name: Attach image to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.build.outputs.image-path }}
+          generate_release_notes: true

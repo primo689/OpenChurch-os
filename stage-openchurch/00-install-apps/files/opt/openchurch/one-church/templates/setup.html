@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="center-page {{ 'wide' if step=='2' }}">
+  <div class="brandmark">One Church Setup</div>
+  {% for msg in get_flashed_messages() %}<div class="flash">{{ msg }}</div>{% endfor %}
+
+  {% if step == '1' %}
+  <h1>Welcome</h1>
+  <p class="sub" style="text-align:center">Step 1 of 2 — your church and the first administrator account.</p>
+  <div class="card">
+    <form method="post" action="{{ url_for('setup', step='1') }}">{{ csrf() }}
+      <label for="church_name">Church name</label>
+      <input type="text" id="church_name" name="church_name" value="{{ form.get('church_name','') }}" required autofocus>
+      <label for="city">City and state <span class="muted">(shown on giving statements)</span></label>
+      <input type="text" id="city" name="city" value="{{ form.get('city','') }}">
+      <h2>Administrator account</h2>
+      <label for="admin_name">Your name</label>
+      <input type="text" id="admin_name" name="admin_name" value="{{ form.get('admin_name','') }}" required>
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" value="{{ form.get('username','') }}" required>
+      <div class="row">
+        <div><label for="password">Password (8+ characters)</label>
+          <input type="password" id="password" name="password" required></div>
+        <div><label for="password2">Confirm password</label>
+          <input type="password" id="password2" name="password2" required></div>
+      </div>
+      <button>Continue</button>
+    </form>
+  </div>
+
+  {% else %}
+  <h1>Leadership</h1>
+  <p class="sub" style="text-align:center">Step 2 of 2 — add your ministers, elders, deacons, and leaders.
+  Each is saved as a member; check the box to also give them a login.</p>
+  <div class="card">
+    <form method="post" action="{{ url_for('setup', step='2') }}">{{ csrf() }}
+      <input type="hidden" name="action" value="add">
+      <div class="row">
+        <div><label for="first_name">First name</label><input type="text" id="first_name" name="first_name"></div>
+        <div><label for="last_name">Last name</label><input type="text" id="last_name" name="last_name"></div>
+        <div><label for="role">Role</label>
+          <select id="role" name="role">
+            {% for r in leadership_roles %}<option>{{ r }}</option>{% endfor %}
+          </select></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink)">
+        <input type="checkbox" name="make_login" style="width:auto"> Also create a login for this person
+      </label>
+      <div class="row">
+        <div><label for="login_username">Username</label><input type="text" id="login_username" name="login_username"></div>
+        <div><label for="login_password">Password (8+ characters)</label><input type="password" id="login_password" name="login_password"></div>
+      </div>
+      <button>Add person</button>
+    </form>
+  </div>
+
+  {% if leaders %}
+  <div class="card">
+    <h2 style="margin-top:0">Added so far</h2>
+    <table>
+      <tr><th>Name</th><th>Role</th></tr>
+      {% for l in leaders %}<tr><td>{{ l.first_name }} {{ l.last_name }}</td><td>{{ l.leadership_role }}</td></tr>{% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('setup', step='2') }}">{{ csrf() }}
+    <input type="hidden" name="action" value="finish">
+    <button>Finish setup</button>
+    <span class="muted"> You can add more people any time later.</span>
+  </form>
+  {% endif %}
+</div>
+</body>
+</html>
